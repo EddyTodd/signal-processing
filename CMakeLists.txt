@@ -37,4 +37,8 @@ if(SIGNAL_PROCESSING_BUILD_TESTS)
     add_executable(signal_processing_transforms tests/transforms.cpp)
     signal_processing_configure_test(signal_processing_transforms)
     add_test(NAME signal_processing_transforms COMMAND signal_processing_transforms)
+
+    add_executable(signal_processing_fir_multirate tests/fir_multirate.cpp)
+    signal_processing_configure_test(signal_processing_fir_multirate)
+    add_test(NAME signal_processing_fir_multirate COMMAND signal_processing_fir_multirate)
 endif()
