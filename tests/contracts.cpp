@@ -2,8 +2,10 @@
 
 #include <cassert>
 #include <cmath>
+#include <complex>
 #include <cstddef>
 #include <limits>
+#include <span>
 #include <stdexcept>
 #include <type_traits>
 #include <vector>
@@ -64,7 +66,9 @@ int main() {
     assert(throws<std::length_error>([] {
         (void)sp::fft::detail::next_power_of_two(std::numeric_limits<std::size_t>::max());
     }));
-    assert(throws<std::invalid_argument>([] { sp::fft::GoodThomasPlan<double> plan(6, 2, 4); }));
+    assert(throws<std::invalid_argument>([] {
+        (void)sp::fft::GoodThomasPlan<double>(6, 2, 4);
+    }));
 
     const std::vector<std::complex<double>> fft_input{{1.0, 0.0}, {2.0, -1.0},
                                                        {-0.5, 2.0}, {3.0, 0.25},
@@ -80,11 +84,11 @@ int main() {
     assert(throws<std::invalid_argument>([&] { (void)sp::stft::power_spectrogram(malformed); }));
 
     assert(throws<std::invalid_argument>([&] {
-        sp::iir::DirectFormI<double> filter({1.0}, {nan});
+        (void)sp::iir::DirectFormI<double>({1.0}, {nan});
     }));
     assert(throws<std::invalid_argument>([&] {
-        sp::iir::BiquadTransposedDirectFormII<double> filter(1.0, 0.0, 0.0,
-                                                             1.0, infinity, 0.0);
+        (void)sp::iir::BiquadTransposedDirectFormII<double>(1.0, 0.0, 0.0,
+                                                            1.0, infinity, 0.0);
     }));
     sp::iir::DirectFormI<double> ieee_filter({1.0}, {1.0});
     assert(std::isnan(ieee_filter.process(nan)));
