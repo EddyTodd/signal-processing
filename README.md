@@ -1,10 +1,12 @@
 # signal-processing
 
-A C++23 library of faithful implementations of important signal-processing algorithms. The repository is designed for both direct reuse and algorithm study: public APIs name the method being executed, and benchmarking infrastructure lives elsewhere.
+A C++23 library of faithful implementations of important signal-processing algorithms. The repository is designed for direct reuse and algorithm study: public APIs name the method being executed, and benchmarking infrastructure lives elsewhere.
+
+**Version 1.0** completes the initial algorithm catalog and freezes the cross-library numerical/API conventions documented in [`docs/contracts.md`](docs/contracts.md).
 
 ## Scope
 
-The current catalog contains:
+The v1 catalog contains:
 
 - Fourier transforms: direct DFT, iterative/recursive radix-2, Stockham, radix-4, classical and modified split-radix, mixed-radix Cooley-Tukey, Good-Thomas/PFA, Rader, and Bluestein;
 - reusable radix-2, real radix-2, mixed-radix, Good-Thomas, Rader, and Bluestein plans;
@@ -59,11 +61,13 @@ const auto zpk = signal_processing::iir::design::elliptic<double>(
 const auto sos = signal_processing::iir::design::second_order_sections(zpk);
 signal_processing::iir::SosCascade<double> filter(sos.sections, sos.gain);
 
-std::vector<double> window(256, 1.0);
+std::vector<double> analysis_signal(512, 0.0);
+const auto window = signal_processing::windows::hann<double>(256);
 const auto time_frequency = signal_processing::stft::bluestein<double>(
-    signal, window, 128, true);
+    analysis_signal, window, 128, true);
 const auto psd = signal_processing::spectral::welch_bluestein<double>(
-    signal, window, 128, 48'000.0, signal_processing::spectral::Sides::one_sided);
+    analysis_signal, window, 128, 48'000.0,
+    signal_processing::spectral::Sides::one_sided);
 ```
 
 There is no algorithm registry or hidden dispatcher. Choose `fft::dft`, `fft::stockham`, `convolution::overlap_add`, `dct::type2_bluestein`, `fir::overlap_save`, `resampling::polyphase_rational`, `iir::DirectFormII`, `iir::design::butterworth`, `stft::bluestein`, `spectral::welch_bluestein`, `goertzel::bin`, and so on explicitly. Reusable state is algorithm-specific rather than selected by an opaque planner.
@@ -76,7 +80,15 @@ cmake --build build
 ctest --test-dir build
 ```
 
-The library is header-only and the CMake surface is intentionally small. Tests are built by default only when this repository is the top-level project. `tests/fft.cpp` checks FFT mechanisms against the direct DFT. `tests/convolution_correlation.cpp` checks blocked, streaming, real/complex, and frequency-domain convolution/correlation forms. `tests/transforms.cpp` checks transform identities and window invariants. `tests/fir_multirate.cpp` checks FIR execution/design and direct/polyphase multirate equivalence. `tests/iir.cpp` checks realization equivalence, prototype-defining response points, stability, Bessel normalization, and SOS/transfer-function equivalence. `tests/spectral.cpp` checks real/complex STFT reconstruction, PSD/CSD identities and one-sided scaling, Goertzel phase agreement, and analytic-signal reconstruction.
+The library is header-only and the CMake surface is intentionally small. Tests are built by default only when this repository is the top-level project.
+
+- `tests/fft.cpp`: FFT mechanisms against the direct DFT and inverse identities;
+- `tests/convolution_correlation.cpp`: blocked, streaming, real/complex, and frequency-domain convolution/correlation forms;
+- `tests/transforms.cpp`: transform identities and window invariants;
+- `tests/fir_multirate.cpp`: FIR execution/design and direct/polyphase multirate equivalence;
+- `tests/iir.cpp`: realization equivalence, prototype-defining response points, stability, Bessel normalization, and SOS/transfer-function equivalence;
+- `tests/spectral.cpp`: real/complex STFT reconstruction, PSD/CSD identities and one-sided scaling, Goertzel phase agreement, and analytic-signal reconstruction;
+- `tests/contracts.cpp`: v1 scalar, invalid-input, overflow, empty-input, and API consistency contracts.
 
 ## Layout
 
@@ -84,6 +96,7 @@ The library is header-only and the CMake surface is intentionally small. Tests a
 include/signal_processing/         public algorithms
 include/signal_processing/detail/  shared implementation support
 tests/                             focused correctness and cross-method tests
+docs/contracts.md                  v1 cross-library numerical/API contracts
 docs/mathematics.md                core definitions and numerical conventions
 docs/transforms.md                 transform/window formulas and normalization
 docs/fir-multirate.md              FIR design/execution and sample-rate conversion
@@ -101,15 +114,16 @@ docs/spectral.md                   STFT, spectral estimators, Goertzel, and Hilb
 - Make normalization, supported lengths, transform conventions, block/partition sizes, resampling factors, filter-response conventions, spectral-density scaling, window/hop choices, state, scratch requirements, and ISA availability explicit.
 - Architecture-specific implementations fail explicitly when unavailable; they never fall back to another kernel.
 - Avoid host-dependent runtime `long double`; public numerical APIs use binary32/binary64 contracts.
+- Reject invalid algorithm definitions explicitly rather than continuing with wrapped size arithmetic, nonfinite control parameters, or unconverged iterative designs.
 - Document mathematical definitions, normalization conventions, domains, and important numerical behavior.
 
-## Remaining v1 milestones
+## v1 status
 
-1. final numerical-contract and API consistency pass.
+The initial v1 algorithm roadmap is complete. Future versions may add additional methods or optimized implementations, but v1's published method identities, normalization conventions, frequency units, and error contracts are the compatibility baseline.
 
 ## Mathematics
 
-See [`docs/mathematics.md`](docs/mathematics.md) for core algorithms, [`docs/transforms.md`](docs/transforms.md) for transform/window conventions, [`docs/fir-multirate.md`](docs/fir-multirate.md) for FIR and multirate processing, [`docs/iir.md`](docs/iir.md) for IIR realizations and filter design, and [`docs/spectral.md`](docs/spectral.md) for time-frequency and spectral analysis.
+Start with [`docs/contracts.md`](docs/contracts.md) for the v1 cross-library contract. See [`docs/mathematics.md`](docs/mathematics.md) for core algorithms, [`docs/transforms.md`](docs/transforms.md) for transform/window conventions, [`docs/fir-multirate.md`](docs/fir-multirate.md) for FIR and multirate processing, [`docs/iir.md`](docs/iir.md) for IIR realizations and filter design, and [`docs/spectral.md`](docs/spectral.md) for time-frequency and spectral analysis.
 
 ## License
 
