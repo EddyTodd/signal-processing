@@ -36,7 +36,9 @@ namespace detail {
         if (signal_size < frame_size) return 0;
         return 1 + (signal_size - frame_size) / hop_size;
     }
-    return 1 + (signal_size - 1) / hop_size;
+    if (signal_size <= frame_size) return 1;
+    const std::size_t remainder = signal_size - frame_size;
+    return 1 + remainder / hop_size + (remainder % hop_size == 0 ? 0 : 1);
 }
 
 }  // namespace detail
