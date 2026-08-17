@@ -9,8 +9,8 @@ The current catalog contains:
 - Fourier transforms: direct DFT, iterative/recursive radix-2, Stockham, radix-4, classical and modified split-radix, mixed-radix Cooley-Tukey, Good-Thomas/PFA, Rader, and Bluestein;
 - reusable radix-2, real radix-2, mixed-radix, Good-Thomas, Rader, and Bluestein plans;
 - radix 2/3/4/5/7 reusable codelets and explicit binary64 scalar/AVX2/AVX-512 radix-2 kernels;
-- direct, circular, and FFT-based convolution;
-- direct cross-correlation and autocorrelation;
+- real and complex direct, circular, radix-2 FFT, overlap-add, overlap-save, streaming direct, and uniform partitioned convolution;
+- real and complex direct/FFT cross-correlation, autocorrelation, and per-lag normalized correlation;
 - DCT-I, DCT-II, DCT-III, and DCT-IV;
 - direct and streaming FIR filtering;
 - Direct Form I IIR filtering and transposed Direct Form II biquads;
@@ -36,10 +36,11 @@ plan.forward_inplace(block);
 
 std::vector<double> signal{1.0, 2.0, 3.0};
 std::vector<double> kernel{0.5, 0.5};
-const auto filtered = signal_processing::convolution::direct<double>(signal, kernel);
+const auto direct = signal_processing::convolution::direct<double>(signal, kernel);
+const auto blocked = signal_processing::convolution::overlap_add<double>(signal, kernel, 2);
 ```
 
-There is no algorithm registry or hidden dispatcher. Choose `fft::dft`, `fft::stockham`, `fft::mixed_radix`, `fft::rader`, `convolution::direct`, and so on explicitly. Reusable FFT plans are also algorithm-specific rather than selected by an opaque planner.
+There is no algorithm registry or hidden dispatcher. Choose `fft::dft`, `fft::stockham`, `fft::mixed_radix`, `fft::rader`, `convolution::direct`, `convolution::overlap_add`, `correlation::cross_direct`, and so on explicitly. Reusable FFT and convolution state is also algorithm-specific rather than selected by an opaque planner.
 
 ## Build and test
 
@@ -49,36 +50,35 @@ cmake --build build
 ctest --test-dir build
 ```
 
-The library is header-only and the CMake surface is intentionally small. Tests are built by default only when this repository is the top-level project. `tests/fft.cpp` checks every FFT mechanism against the direct DFT for deterministic binary32/binary64 inputs and validates plans, real transforms, inverse reconstruction, codelets, and available SIMD kernels.
+The library is header-only and the CMake surface is intentionally small. Tests are built by default only when this repository is the top-level project. `tests/fft.cpp` checks the FFT mechanisms against the direct DFT. `tests/convolution_correlation.cpp` checks the blocked, streaming, real/complex, and frequency-domain convolution/correlation forms against their direct definitions.
 
 ## Layout
 
 ```text
 include/signal_processing/         public algorithms
-include/signal_processing/detail/  implementation support for complex algorithm families
+include/signal_processing/detail/  shared implementation support
 tests/                             focused correctness and cross-method tests
 docs/mathematics.md                definitions, conventions, and numerical notes
 ```
 
 ## Design rules
 
-- C++23 with deliberate binary32 and binary64 support.
+- C++23 with deliberate binary32 and binary64 support, including real and complex signal samples where the mathematics supports both.
 - Preserve algorithm identity: optimize implementations without silently changing the method.
 - Prefer direct free functions and small stateful algorithm objects over registries and framework abstractions.
 - Keep measurement, benchmark statistics, campaigns, and reporting outside this repository.
-- Make normalization, supported lengths, state, scratch requirements, and ISA availability explicit.
+- Make normalization, supported lengths, block/partition sizes, state, scratch requirements, and ISA availability explicit.
 - Architecture-specific implementations fail explicitly when unavailable; they never fall back to another kernel.
 - Avoid host-dependent runtime `long double`; FFT chirp phase reduction uses overflow-safe modular integer arithmetic instead.
 - Document mathematical definitions, normalization conventions, domains, and important numerical behavior.
 
 ## Remaining v1 milestones
 
-1. convolution and correlation algorithms;
-2. discrete transforms and window functions;
-3. FIR filtering and multirate processing;
-4. IIR filtering and filter design;
-5. time-frequency and spectral analysis;
-6. final numerical-contract and API consistency pass.
+1. discrete transforms and window functions;
+2. FIR filtering and multirate processing;
+3. IIR filtering and filter design;
+4. time-frequency and spectral analysis;
+5. final numerical-contract and API consistency pass.
 
 ## Mathematics
 
