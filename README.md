@@ -19,7 +19,8 @@ The current catalog contains:
 - real/complex direct, FFT, overlap-save, streaming, symmetric, and antisymmetric FIR filtering;
 - windowed-sinc low/high/band-pass/band-stop FIR design and Type-I Parks-McClellan/Remez equiripple design;
 - downsampling, zero insertion, zero-order hold, linear and windowed-sinc interpolation, FIR decimation/interpolation, rational conversion, and explicit polyphase forms;
-- Direct Form I IIR filtering and transposed Direct Form II biquads.
+- IIR Direct Form I/II and transposed forms, explicit first-order/biquad structures, and SOS cascades;
+- Butterworth, Chebyshev-I/II, elliptic, and Bessel analog prototypes with low/high/band-pass/band-stop transformation, bilinear conversion, ZPK/transfer-function/SOS conversion, stability checks, and frequency response.
 
 The FFT implementation is owned by this repository. `EddyTodd/fft` remains useful as the earlier focused research history, but `signal-processing` does not depend on it.
 
@@ -44,18 +45,18 @@ std::vector<double> kernel{0.5, 0.5};
 const auto direct = signal_processing::convolution::direct<double>(signal, kernel);
 const auto blocked = signal_processing::convolution::overlap_add<double>(signal, kernel, 2);
 
-const auto cosine = signal_processing::dct::type2<double>(signal);
-const auto cosine_fast = signal_processing::dct::type2_bluestein<double>(signal);
-const auto analysis_window = signal_processing::windows::hann<double>(
-    1024, signal_processing::windows::Sampling::periodic);
-
 const auto lowpass = signal_processing::fir_design::remez_lowpass<double>(
     63, 0.18, 0.24, 1.0, 10.0);
 const auto converted = signal_processing::resampling::polyphase_rational<double>(
     signal, 3, 2, lowpass);
+
+const auto zpk = signal_processing::iir::design::elliptic<double>(
+    6, 1.0, 60.0, signal_processing::iir::design::Response::lowpass, 0.25);
+const auto sos = signal_processing::iir::design::second_order_sections(zpk);
+signal_processing::iir::SosCascade<double> filter(sos.sections, sos.gain);
 ```
 
-There is no algorithm registry or hidden dispatcher. Choose `fft::dft`, `fft::stockham`, `fft::mixed_radix`, `convolution::direct`, `convolution::overlap_add`, `dct::type2`, `dct::type2_bluestein`, `fir::direct`, `fir::overlap_save`, `resampling::rational_fir`, `resampling::polyphase_rational`, and so on explicitly. Reusable state is algorithm-specific rather than selected by an opaque planner.
+There is no algorithm registry or hidden dispatcher. Choose `fft::dft`, `fft::stockham`, `convolution::overlap_add`, `dct::type2_bluestein`, `fir::overlap_save`, `resampling::polyphase_rational`, `iir::DirectFormII`, `iir::design::butterworth`, and so on explicitly. Reusable state is algorithm-specific rather than selected by an opaque planner.
 
 ## Build and test
 
@@ -65,7 +66,7 @@ cmake --build build
 ctest --test-dir build
 ```
 
-The library is header-only and the CMake surface is intentionally small. Tests are built by default only when this repository is the top-level project. `tests/fft.cpp` checks the FFT mechanisms against the direct DFT. `tests/convolution_correlation.cpp` checks blocked, streaming, real/complex, and frequency-domain convolution/correlation forms against direct definitions. `tests/transforms.cpp` checks direct/fast transform agreement, inverse-scaling identities, MDCT basis behavior, and window invariants. `tests/fir_multirate.cpp` checks direct/FFT/overlap-save/streaming FIR equivalence, linear-phase reductions, FIR design invariants, and direct/polyphase multirate equivalence.
+The library is header-only and the CMake surface is intentionally small. Tests are built by default only when this repository is the top-level project. `tests/fft.cpp` checks FFT mechanisms against the direct DFT. `tests/convolution_correlation.cpp` checks blocked, streaming, real/complex, and frequency-domain convolution/correlation forms. `tests/transforms.cpp` checks transform identities and window invariants. `tests/fir_multirate.cpp` checks FIR execution/design and direct/polyphase multirate equivalence. `tests/iir.cpp` checks realization equivalence, prototype-defining response points, stability, Bessel normalization, and SOS/transfer-function equivalence.
 
 ## Layout
 
@@ -76,6 +77,7 @@ tests/                             focused correctness and cross-method tests
 docs/mathematics.md                core definitions and numerical conventions
 docs/transforms.md                 transform/window formulas and normalization
 docs/fir-multirate.md              FIR design/execution and sample-rate conversion
+docs/iir.md                        IIR realizations, prototypes, transforms, and design
 ```
 
 ## Design rules
@@ -85,20 +87,19 @@ docs/fir-multirate.md              FIR design/execution and sample-rate conversi
 - Prefer direct free functions and small stateful algorithm objects over registries and framework abstractions.
 - Keep measurement, benchmark statistics, campaigns, and reporting outside this repository.
 - Keep design algorithms separate from execution algorithms.
-- Make normalization, supported lengths, transform conventions, block/partition sizes, resampling factors, state, scratch requirements, and ISA availability explicit.
+- Make normalization, supported lengths, transform conventions, block/partition sizes, resampling factors, filter-response conventions, state, scratch requirements, and ISA availability explicit.
 - Architecture-specific implementations fail explicitly when unavailable; they never fall back to another kernel.
-- Avoid host-dependent runtime `long double`; FFT chirp phase reduction uses overflow-safe modular integer arithmetic instead.
+- Avoid host-dependent runtime `long double`; public numerical APIs use binary32/binary64 contracts.
 - Document mathematical definitions, normalization conventions, domains, and important numerical behavior.
 
 ## Remaining v1 milestones
 
-1. IIR filtering and filter design;
-2. time-frequency and spectral analysis;
-3. final numerical-contract and API consistency pass.
+1. time-frequency and spectral analysis;
+2. final numerical-contract and API consistency pass.
 
 ## Mathematics
 
-See [`docs/mathematics.md`](docs/mathematics.md) for core algorithms, [`docs/transforms.md`](docs/transforms.md) for transform/window conventions, and [`docs/fir-multirate.md`](docs/fir-multirate.md) for FIR and multirate processing.
+See [`docs/mathematics.md`](docs/mathematics.md) for core algorithms, [`docs/transforms.md`](docs/transforms.md) for transform/window conventions, [`docs/fir-multirate.md`](docs/fir-multirate.md) for FIR and multirate processing, and [`docs/iir.md`](docs/iir.md) for IIR realizations and filter design.
 
 ## License
 
