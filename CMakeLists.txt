@@ -45,4 +45,8 @@ if(SIGNAL_PROCESSING_BUILD_TESTS)
     add_executable(signal_processing_iir tests/iir.cpp)
     signal_processing_configure_test(signal_processing_iir)
     add_test(NAME signal_processing_iir COMMAND signal_processing_iir)
+
+    add_executable(signal_processing_spectral tests/spectral.cpp)
+    signal_processing_configure_test(signal_processing_spectral)
+    add_test(NAME signal_processing_spectral COMMAND signal_processing_spectral)
 endif()

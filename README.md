@@ -20,7 +20,11 @@ The current catalog contains:
 - windowed-sinc low/high/band-pass/band-stop FIR design and Type-I Parks-McClellan/Remez equiripple design;
 - downsampling, zero insertion, zero-order hold, linear and windowed-sinc interpolation, FIR decimation/interpolation, rational conversion, and explicit polyphase forms;
 - IIR Direct Form I/II and transposed forms, explicit first-order/biquad structures, and SOS cascades;
-- Butterworth, Chebyshev-I/II, elliptic, and Bessel analog prototypes with low/high/band-pass/band-stop transformation, bilinear conversion, ZPK/transfer-function/SOS conversion, stability checks, and frequency response.
+- Butterworth, Chebyshev-I/II, elliptic, and Bessel analog prototypes with low/high/band-pass/band-stop transformation, bilinear conversion, ZPK/transfer-function/SOS conversion, stability checks, and frequency response;
+- arbitrary-length Bluestein STFT/ISTFT with explicit window, hop, end-padding, and weighted overlap-add reconstruction;
+- magnitude, phase, and power spectra plus periodogram, Welch PSD, cross-spectral density, and spectrogram density estimators;
+- phase-correct Goertzel evaluation at DFT bins or arbitrary cycles-per-sample frequencies;
+- DFT-domain Hilbert transform, analytic signal, and envelope extraction.
 
 The FFT implementation is owned by this repository. `EddyTodd/fft` remains useful as the earlier focused research history, but `signal-processing` does not depend on it.
 
@@ -54,9 +58,15 @@ const auto zpk = signal_processing::iir::design::elliptic<double>(
     6, 1.0, 60.0, signal_processing::iir::design::Response::lowpass, 0.25);
 const auto sos = signal_processing::iir::design::second_order_sections(zpk);
 signal_processing::iir::SosCascade<double> filter(sos.sections, sos.gain);
+
+std::vector<double> window(256, 1.0);
+const auto time_frequency = signal_processing::stft::bluestein<double>(
+    signal, window, 128, true);
+const auto psd = signal_processing::spectral::welch_bluestein<double>(
+    signal, window, 128, 48'000.0, signal_processing::spectral::Sides::one_sided);
 ```
 
-There is no algorithm registry or hidden dispatcher. Choose `fft::dft`, `fft::stockham`, `convolution::overlap_add`, `dct::type2_bluestein`, `fir::overlap_save`, `resampling::polyphase_rational`, `iir::DirectFormII`, `iir::design::butterworth`, and so on explicitly. Reusable state is algorithm-specific rather than selected by an opaque planner.
+There is no algorithm registry or hidden dispatcher. Choose `fft::dft`, `fft::stockham`, `convolution::overlap_add`, `dct::type2_bluestein`, `fir::overlap_save`, `resampling::polyphase_rational`, `iir::DirectFormII`, `iir::design::butterworth`, `stft::bluestein`, `spectral::welch_bluestein`, `goertzel::bin`, and so on explicitly. Reusable state is algorithm-specific rather than selected by an opaque planner.
 
 ## Build and test
 
@@ -66,7 +76,7 @@ cmake --build build
 ctest --test-dir build
 ```
 
-The library is header-only and the CMake surface is intentionally small. Tests are built by default only when this repository is the top-level project. `tests/fft.cpp` checks FFT mechanisms against the direct DFT. `tests/convolution_correlation.cpp` checks blocked, streaming, real/complex, and frequency-domain convolution/correlation forms. `tests/transforms.cpp` checks transform identities and window invariants. `tests/fir_multirate.cpp` checks FIR execution/design and direct/polyphase multirate equivalence. `tests/iir.cpp` checks realization equivalence, prototype-defining response points, stability, Bessel normalization, and SOS/transfer-function equivalence.
+The library is header-only and the CMake surface is intentionally small. Tests are built by default only when this repository is the top-level project. `tests/fft.cpp` checks FFT mechanisms against the direct DFT. `tests/convolution_correlation.cpp` checks blocked, streaming, real/complex, and frequency-domain convolution/correlation forms. `tests/transforms.cpp` checks transform identities and window invariants. `tests/fir_multirate.cpp` checks FIR execution/design and direct/polyphase multirate equivalence. `tests/iir.cpp` checks realization equivalence, prototype-defining response points, stability, Bessel normalization, and SOS/transfer-function equivalence. `tests/spectral.cpp` checks real/complex STFT reconstruction, PSD/CSD identities and one-sided scaling, Goertzel phase agreement, and analytic-signal reconstruction.
 
 ## Layout
 
@@ -78,6 +88,7 @@ docs/mathematics.md                core definitions and numerical conventions
 docs/transforms.md                 transform/window formulas and normalization
 docs/fir-multirate.md              FIR design/execution and sample-rate conversion
 docs/iir.md                        IIR realizations, prototypes, transforms, and design
+docs/spectral.md                   STFT, spectral estimators, Goertzel, and Hilbert analysis
 ```
 
 ## Design rules
@@ -87,19 +98,18 @@ docs/iir.md                        IIR realizations, prototypes, transforms, and
 - Prefer direct free functions and small stateful algorithm objects over registries and framework abstractions.
 - Keep measurement, benchmark statistics, campaigns, and reporting outside this repository.
 - Keep design algorithms separate from execution algorithms.
-- Make normalization, supported lengths, transform conventions, block/partition sizes, resampling factors, filter-response conventions, state, scratch requirements, and ISA availability explicit.
+- Make normalization, supported lengths, transform conventions, block/partition sizes, resampling factors, filter-response conventions, spectral-density scaling, window/hop choices, state, scratch requirements, and ISA availability explicit.
 - Architecture-specific implementations fail explicitly when unavailable; they never fall back to another kernel.
 - Avoid host-dependent runtime `long double`; public numerical APIs use binary32/binary64 contracts.
 - Document mathematical definitions, normalization conventions, domains, and important numerical behavior.
 
 ## Remaining v1 milestones
 
-1. time-frequency and spectral analysis;
-2. final numerical-contract and API consistency pass.
+1. final numerical-contract and API consistency pass.
 
 ## Mathematics
 
-See [`docs/mathematics.md`](docs/mathematics.md) for core algorithms, [`docs/transforms.md`](docs/transforms.md) for transform/window conventions, [`docs/fir-multirate.md`](docs/fir-multirate.md) for FIR and multirate processing, and [`docs/iir.md`](docs/iir.md) for IIR realizations and filter design.
+See [`docs/mathematics.md`](docs/mathematics.md) for core algorithms, [`docs/transforms.md`](docs/transforms.md) for transform/window conventions, [`docs/fir-multirate.md`](docs/fir-multirate.md) for FIR and multirate processing, [`docs/iir.md`](docs/iir.md) for IIR realizations and filter design, and [`docs/spectral.md`](docs/spectral.md) for time-frequency and spectral analysis.
 
 ## License
 
