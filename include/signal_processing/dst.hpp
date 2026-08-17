@@ -149,12 +149,16 @@ template <fft::Scalar T>
 
     for (std::size_t k = 0; k < n; ++k) {
         const std::size_t m = k + 1;
+        if (m == n) {
+            spectrum[m] = {input[k], T{0}};
+            continue;
+        }
         const T angle = std::numbers::pi_v<T> * static_cast<T>(m) /
                         (T{2} * static_cast<T>(n));
         const fft::Complex<T> phase{std::cos(angle), std::sin(angle)};
         const fft::Complex<T> value = fft::Complex<T>{T{0}, T{-1}} * input[k] * phase;
         spectrum[m] = value;
-        if (m < n) spectrum[period - m] = std::conj(value);
+        spectrum[period - m] = std::conj(value);
     }
 
     const auto time = fft::bluestein<T>(spectrum, fft::Direction::inverse);
