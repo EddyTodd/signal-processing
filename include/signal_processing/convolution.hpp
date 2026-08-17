@@ -2,7 +2,6 @@
 
 #include "signal_processing/detail/sample.hpp"
 #include "signal_processing/fft.hpp"
-#include "signal_processing/fft_plans.hpp"
 
 #include <algorithm>
 #include <complex>
@@ -252,7 +251,8 @@ template <signal_processing::detail::Sample T>
         consumed += count;
         plan.process_block(block, produced);
         const std::size_t keep = std::min(block_size, output_size - output.size());
-        output.insert(output.end(), produced.begin(), produced.begin() + static_cast<std::ptrdiff_t>(keep));
+        const auto valid = std::span<const T>(produced).first(keep);
+        output.insert(output.end(), valid.begin(), valid.end());
     }
     return output;
 }
@@ -406,8 +406,8 @@ template <signal_processing::detail::Sample T>
         consumed += count;
         convolver.process_block(input_block, output_block);
         const std::size_t keep = std::min(partition_size, output_size - output.size());
-        output.insert(output.end(), output_block.begin(),
-                      output_block.begin() + static_cast<std::ptrdiff_t>(keep));
+        const auto valid = std::span<const T>(output_block).first(keep);
+        output.insert(output.end(), valid.begin(), valid.end());
     }
     return output;
 }
