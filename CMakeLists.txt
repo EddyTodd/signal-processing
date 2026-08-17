@@ -8,15 +8,24 @@ target_include_directories(signal_processing INTERFACE ${CMAKE_CURRENT_SOURCE_DI
 
 option(SIGNAL_PROCESSING_BUILD_TESTS "Build correctness tests" ${PROJECT_IS_TOP_LEVEL})
 
-if(SIGNAL_PROCESSING_BUILD_TESTS)
-    include(CTest)
-    add_executable(signal_processing_smoke tests/smoke.cpp)
-    target_link_libraries(signal_processing_smoke PRIVATE signal_processing::signal_processing)
+function(signal_processing_configure_test target)
+    target_link_libraries(${target} PRIVATE signal_processing::signal_processing)
     if(MSVC)
-        target_compile_options(signal_processing_smoke PRIVATE /W4 /permissive-)
+        target_compile_options(${target} PRIVATE /W4 /permissive-)
     else()
-        target_compile_options(signal_processing_smoke PRIVATE
+        target_compile_options(${target} PRIVATE
             -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wdouble-promotion -Wold-style-cast)
     endif()
+endfunction()
+
+if(SIGNAL_PROCESSING_BUILD_TESTS)
+    include(CTest)
+
+    add_executable(signal_processing_smoke tests/smoke.cpp)
+    signal_processing_configure_test(signal_processing_smoke)
     add_test(NAME signal_processing_smoke COMMAND signal_processing_smoke)
+
+    add_executable(signal_processing_fft tests/fft.cpp)
+    signal_processing_configure_test(signal_processing_fft)
+    add_test(NAME signal_processing_fft COMMAND signal_processing_fft)
 endif()
