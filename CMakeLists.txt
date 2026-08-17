@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(signal_processing VERSION 0.1.0 LANGUAGES CXX)
+project(signal_processing VERSION 1.0.0 LANGUAGES CXX)
 
 add_library(signal_processing INTERFACE)
 add_library(signal_processing::signal_processing ALIAS signal_processing)
@@ -49,4 +49,8 @@ if(SIGNAL_PROCESSING_BUILD_TESTS)
     add_executable(signal_processing_spectral tests/spectral.cpp)
     signal_processing_configure_test(signal_processing_spectral)
     add_test(NAME signal_processing_spectral COMMAND signal_processing_spectral)
+
+    add_executable(signal_processing_contracts tests/contracts.cpp)
+    signal_processing_configure_test(signal_processing_contracts)
+    add_test(NAME signal_processing_contracts COMMAND signal_processing_contracts)
 endif()
