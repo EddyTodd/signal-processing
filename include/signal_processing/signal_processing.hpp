@@ -9,6 +9,7 @@
 #include "signal_processing/fir_design.hpp"
 #include "signal_processing/hartley.hpp"
 #include "signal_processing/iir.hpp"
+#include "signal_processing/iir_design.hpp"
 #include "signal_processing/mdct.hpp"
 #include "signal_processing/resampling.hpp"
 #include "signal_processing/walsh_hadamard.hpp"
