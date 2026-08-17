@@ -50,11 +50,8 @@ template <signal_processing::detail::Sample Sample>
 [[nodiscard]] inline signal_processing::detail::complex_t<Sample> bin(
     std::span<const Sample> input, std::size_t bin_index) {
     using Scalar = signal_processing::detail::scalar_t<Sample>;
-    if (input.empty()) {
-        if (bin_index != 0) throw std::out_of_range("Goertzel bin is outside an empty transform");
-        return {};
-    }
-    if (bin_index >= input.size()) throw std::out_of_range("Goertzel bin is outside the DFT");
+    if (input.empty() || bin_index >= input.size())
+        throw std::out_of_range("Goertzel bin is outside the DFT");
     return frequency<Sample>(input, static_cast<Scalar>(bin_index) /
                                         static_cast<Scalar>(input.size()));
 }
