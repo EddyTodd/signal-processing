@@ -28,4 +28,9 @@ if(SIGNAL_PROCESSING_BUILD_TESTS)
     add_executable(signal_processing_fft tests/fft.cpp)
     signal_processing_configure_test(signal_processing_fft)
     add_test(NAME signal_processing_fft COMMAND signal_processing_fft)
+
+    add_executable(signal_processing_convolution_correlation tests/convolution_correlation.cpp)
+    signal_processing_configure_test(signal_processing_convolution_correlation)
+    add_test(NAME signal_processing_convolution_correlation
+             COMMAND signal_processing_convolution_correlation)
 endif()
