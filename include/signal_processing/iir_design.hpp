@@ -52,18 +52,37 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] std::size_t relative_degree(const Zpk<T>& zpk) {
-    if (zpk.zeros.size() > zpk.poles.size()) {
+    if (zpk.zeros.size() > zpk.poles.size())
         throw std::invalid_argument("ZPK must have at least as many poles as zeros");
-    }
     return zpk.poles.size() - zpk.zeros.size();
+}
+
+[[nodiscard]] inline std::size_t twice_count(std::size_t count, const char* message) {
+    if (count > std::numeric_limits<std::size_t>::max() / 2)
+        throw std::length_error(message);
+    return 2 * count;
+}
+
+[[nodiscard]] inline std::size_t twice_plus(std::size_t count, std::size_t extra,
+                                             const char* message) {
+    if (extra > std::numeric_limits<std::size_t>::max() ||
+        count > (std::numeric_limits<std::size_t>::max() - extra) / 2)
+        throw std::length_error(message);
+    return 2 * count + extra;
+}
+
+[[nodiscard]] inline std::size_t twice_sum(std::size_t first, std::size_t second,
+                                            const char* message) {
+    if (first > std::numeric_limits<std::size_t>::max() - second)
+        throw std::length_error(message);
+    return twice_count(first + second, message);
 }
 
 template <Scalar T>
 [[nodiscard]] T carlson_rf(T x, T y, T z) {
     if (x < T{} || y < T{} || z < T{} || (x + y == T{}) ||
-        (x + z == T{}) || (y + z == T{})) {
+        (x + z == T{}) || (y + z == T{}))
         throw std::invalid_argument("Carlson RF requires nonnegative arguments with at most one zero");
-    }
     constexpr T c1 = static_cast<T>(1.0 / 24.0);
     constexpr T c2 = static_cast<T>(0.1);
     constexpr T c3 = static_cast<T>(3.0 / 44.0);
@@ -101,9 +120,8 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] T complete_elliptic_k(T m) {
-    if (!(m >= T{} && m < T{1})) {
+    if (!(m >= T{} && m < T{1}))
         throw std::invalid_argument("elliptic parameter must be in [0, 1)");
-    }
     return carlson_rf<T>(T{}, T{1} - m, T{1});
 }
 
@@ -116,14 +134,12 @@ struct JacobiValues {
 
 template <Scalar T>
 [[nodiscard]] JacobiValues<T> jacobi_real(T u, T m) {
-    if (m < T{} || m >= T{1}) {
+    if (m < T{} || m >= T{1})
         throw std::invalid_argument("Jacobi parameter must be in [0, 1)");
-    }
     if (m == T{}) return {std::sin(u), std::cos(u), T{1}};
     const T capk = complete_elliptic_k<T>(m);
-    if (std::abs(u) > capk) {
+    if (std::abs(u) > capk)
         throw std::invalid_argument("Jacobi helper supports |u| <= K(m)");
-    }
     const T sign = u < T{} ? T{-1} : T{1};
     const T target = std::abs(u);
     T lo{};
@@ -141,9 +157,8 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] T inverse_sc_complement(T w, T m1) {
-    if (!(w >= T{}) || !(m1 > T{} && m1 < T{1})) {
+    if (!(w >= T{}) || !(m1 > T{} && m1 < T{1}))
         throw std::invalid_argument("inverse sc requires w >= 0 and m in (0,1)");
-    }
     const T m = T{1} - m1;
     T lo{};
     T hi = complete_elliptic_k<T>(m) *
@@ -165,13 +180,9 @@ template <Scalar T>
     const T q1 = std::exp(-std::numbers::pi_v<T> * k1p / k1);
     const T q = std::pow(q1, T{1} / static_cast<T>(n));
     T numerator{};
-    for (int j = 0; j <= 7; ++j) {
-        numerator += std::pow(q, static_cast<T>(j * (j + 1)));
-    }
+    for (int j = 0; j <= 7; ++j) numerator += std::pow(q, static_cast<T>(j * (j + 1)));
     T denominator{1};
-    for (int j = 1; j <= 8; ++j) {
-        denominator += T{2} * std::pow(q, static_cast<T>(j * j));
-    }
+    for (int j = 1; j <= 8; ++j) denominator += T{2} * std::pow(q, static_cast<T>(j * j));
     const T ratio = numerator / denominator;
     return T{16} * q * ratio * ratio * ratio * ratio;
 }
@@ -179,9 +190,7 @@ template <Scalar T>
 template <Scalar T>
 [[nodiscard]] Complex<T> polynomial_value(std::span<const T> coefficients, Complex<T> z) {
     Complex<T> result{};
-    for (std::size_t i = coefficients.size(); i-- > 0;) {
-        result = result * z + coefficients[i];
-    }
+    for (std::size_t i = coefficients.size(); i-- > 0;) result = result * z + coefficients[i];
     return result;
 }
 
@@ -189,20 +198,19 @@ template <Scalar T>
 [[nodiscard]] Complex<T> polynomial_derivative(std::span<const T> coefficients,
                                                 Complex<T> z) {
     Complex<T> result{};
-    for (std::size_t i = coefficients.size(); i-- > 1;) {
+    for (std::size_t i = coefficients.size(); i-- > 1;)
         result = result * z + static_cast<T>(i) * coefficients[i];
-    }
     return result;
 }
 
 template <Scalar T>
 [[nodiscard]] std::vector<Complex<T>> scaled_polynomial_roots_aberth(
     std::span<const T> coefficients) {
+    if (coefficients.empty())
+        throw std::invalid_argument("scaled root finder requires a nonempty polynomial");
     const std::size_t n = coefficients.size() - 1;
-    if (n == 0 || coefficients.front() == T{} || coefficients.back() == T{}) {
-        throw std::invalid_argument(
-            "scaled root finder requires nonzero constant and leading coefficients");
-    }
+    if (n == 0 || coefficients.front() == T{} || coefficients.back() == T{})
+        throw std::invalid_argument("scaled root finder requires nonzero constant and leading coefficients");
     const T scale = std::pow(std::abs(coefficients.front() / coefficients.back()),
                              T{1} / static_cast<T>(n));
     std::vector<T> scaled(coefficients.size());
@@ -223,9 +231,8 @@ template <Scalar T>
             const auto f = polynomial_value<T>(scaled, roots[i]);
             const auto fp = polynomial_derivative<T>(scaled, roots[i]);
             Complex<T> sum{};
-            for (std::size_t j = 0; j < n; ++j) {
+            for (std::size_t j = 0; j < n; ++j)
                 if (j != i) sum += T{1} / (roots[i] - roots[j]);
-            }
             const auto denominator = fp - f * sum;
             if (std::abs(denominator) != T{}) roots[i] -= f / denominator;
         }
@@ -252,14 +259,18 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] std::vector<T> reverse_bessel_coefficients(std::size_t n) {
+    if (n == std::numeric_limits<std::size_t>::max())
+        throw std::length_error("Bessel coefficient count overflows size_t");
     if (n == 0) return {T{1}};
     std::vector<T> coefficients(n + 1);
     T a0{1};
-    for (std::size_t j = 1; j <= n; ++j) a0 *= static_cast<T>(n + j) / T{2};
+    for (std::size_t j = 1; j <= n; ++j)
+        a0 *= (static_cast<T>(n) + static_cast<T>(j)) / T{2};
     coefficients[0] = a0;
     for (std::size_t k = 0; k < n; ++k) {
         coefficients[k + 1] = coefficients[k] * T{2} * static_cast<T>(n - k) /
-                              (static_cast<T>(k + 1) * static_cast<T>(2 * n - k));
+                              (static_cast<T>(k + 1) *
+                               (T{2} * static_cast<T>(n) - static_cast<T>(k)));
     }
     return coefficients;
 }
@@ -279,9 +290,8 @@ template <Scalar T>
     std::vector<Complex<T>> coefficients{Complex<T>{1, 0}};
     for (const auto& root : roots) {
         coefficients.push_back({});
-        for (std::size_t i = coefficients.size() - 1; i > 0; --i) {
+        for (std::size_t i = coefficients.size() - 1; i > 0; --i)
             coefficients[i] = coefficients[i] - root * coefficients[i - 1];
-        }
     }
     return coefficients;
 }
@@ -300,16 +310,14 @@ template <Scalar T>
 
         if (first_is_real) {
             const auto it = std::find_if(roots.begin(), roots.end(), [&](const auto& root) {
-                return std::abs(root.imag()) <=
-                       tolerance * (T{1} + std::abs(root.real()));
+                return std::abs(root.imag()) <= tolerance * (T{1} + std::abs(root.real()));
             });
             if (it == roots.end()) {
                 pairs.push_back({Complex<T>{first.real(), T{}}, Complex<T>{T{}, T{}}});
             } else {
                 const auto second = *it;
                 roots.erase(it);
-                pairs.push_back({Complex<T>{first.real(), T{}},
-                                 Complex<T>{second.real(), T{}}});
+                pairs.push_back({Complex<T>{first.real(), T{}}, Complex<T>{second.real(), T{}}});
             }
             continue;
         }
@@ -320,9 +328,8 @@ template <Scalar T>
             return std::abs(lhs - target) < std::abs(rhs - target);
         });
         if (it == roots.end() ||
-            std::abs(*it - target) > static_cast<T>(1e-3) * (T{1} + std::abs(target))) {
+            std::abs(*it - target) > static_cast<T>(1e-3) * (T{1} + std::abs(target)))
             throw std::runtime_error("could not pair conjugate filter roots");
-        }
         const auto second = *it;
         roots.erase(it);
         pairs.push_back({first, second});
@@ -351,9 +358,8 @@ template <Scalar T>
     Zpk<T> result;
     result.poles.reserve(order);
     for (std::size_t k = 0; k < order; ++k) {
-        const int m = -static_cast<int>(order) + 1 + 2 * static_cast<int>(k);
-        const T angle = std::numbers::pi_v<T> * static_cast<T>(m) /
-                        (T{2} * static_cast<T>(order));
+        const T m = T{1} + T{2} * static_cast<T>(k) - static_cast<T>(order);
+        const T angle = std::numbers::pi_v<T> * m / (T{2} * static_cast<T>(order));
         result.poles.push_back(-std::exp(Complex<T>{T{}, angle}));
     }
     result.gain = T{1};
@@ -364,9 +370,8 @@ template <Scalar T>
 // https://en.wikipedia.org/wiki/Chebyshev_filter
 template <Scalar T>
 [[nodiscard]] Zpk<T> chebyshev1_prototype(std::size_t order, T ripple_db) {
-    if (ripple_db <= T{}) {
-        throw std::invalid_argument("Chebyshev-I ripple must be positive");
-    }
+    if (!(ripple_db > T{}) || !std::isfinite(ripple_db))
+        throw std::invalid_argument("Chebyshev-I ripple must be finite and positive");
     if (order == 0) return {{}, {}, std::pow(T{10}, -ripple_db / T{20})};
 
     const T epsilon = std::sqrt(detail::pow10m1<T>(ripple_db / T{10}));
@@ -374,9 +379,8 @@ template <Scalar T>
     Zpk<T> result;
     result.poles.reserve(order);
     for (std::size_t k = 0; k < order; ++k) {
-        const int m = -static_cast<int>(order) + 1 + 2 * static_cast<int>(k);
-        const T theta = std::numbers::pi_v<T> * static_cast<T>(m) /
-                        (T{2} * static_cast<T>(order));
+        const T m = T{1} + T{2} * static_cast<T>(k) - static_cast<T>(order);
+        const T theta = std::numbers::pi_v<T> * m / (T{2} * static_cast<T>(order));
         result.poles.push_back(-std::sinh(Complex<T>{mu, theta}));
     }
     result.gain = detail::product_negated<T>(result.poles).real();
@@ -386,9 +390,8 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] Zpk<T> chebyshev2_prototype(std::size_t order, T stop_db) {
-    if (stop_db <= T{}) {
-        throw std::invalid_argument("Chebyshev-II attenuation must be positive");
-    }
+    if (!(stop_db > T{}) || !std::isfinite(stop_db))
+        throw std::invalid_argument("Chebyshev-II attenuation must be finite and positive");
     if (order == 0) return {};
 
     const T de = T{1} / std::sqrt(detail::pow10m1<T>(stop_db / T{10}));
@@ -397,17 +400,14 @@ template <Scalar T>
     result.poles.reserve(order);
     result.zeros.reserve(order);
     for (std::size_t k = 0; k < order; ++k) {
-        const int m = -static_cast<int>(order) + 1 + 2 * static_cast<int>(k);
-        const T theta = std::numbers::pi_v<T> * static_cast<T>(m) /
-                        (T{2} * static_cast<T>(order));
-        if (!((order & 1U) != 0U && m == 0)) {
+        const T m = T{1} + T{2} * static_cast<T>(k) - static_cast<T>(order);
+        const T theta = std::numbers::pi_v<T> * m / (T{2} * static_cast<T>(order));
+        if (!((order & 1U) != 0U && m == T{}))
             result.zeros.emplace_back(T{}, T{1} / std::sin(theta));
-        }
         result.poles.push_back(-T{1} / std::sinh(Complex<T>{mu, theta}));
     }
     result.gain = (detail::product_negated<T>(result.poles) /
-                   detail::product_negated<T>(result.zeros))
-                      .real();
+                   detail::product_negated<T>(result.zeros)).real();
     return result;
 }
 
@@ -415,9 +415,9 @@ template <Scalar T>
 // https://en.wikipedia.org/wiki/Elliptic_filter
 template <Scalar T>
 [[nodiscard]] Zpk<T> elliptic_prototype(std::size_t order, T ripple_db, T stop_db) {
-    if (ripple_db <= T{} || stop_db <= ripple_db) {
-        throw std::invalid_argument("elliptic design requires 0 < ripple_db < stop_db");
-    }
+    if (!(ripple_db > T{} && stop_db > ripple_db) ||
+        !std::isfinite(ripple_db) || !std::isfinite(stop_db))
+        throw std::invalid_argument("elliptic design requires finite 0 < ripple_db < stop_db");
     if (order == 0) return {{}, {}, std::pow(T{10}, -ripple_db / T{20})};
     if (order == 1) {
         const T pole = -std::sqrt(T{1} / detail::pow10m1<T>(ripple_db / T{10}));
@@ -427,25 +427,18 @@ template <Scalar T>
     const T epsilon_squared = detail::pow10m1<T>(ripple_db / T{10});
     const T complementary_modulus_squared =
         epsilon_squared / detail::pow10m1<T>(stop_db / T{10});
-    if (!(complementary_modulus_squared > T{} &&
-          complementary_modulus_squared < T{1})) {
+    if (!(complementary_modulus_squared > T{} && complementary_modulus_squared < T{1}))
         throw std::invalid_argument("elliptic specifications are not realizable");
-    }
 
     const T epsilon = std::sqrt(epsilon_squared);
     const T modulus_squared = detail::elliptic_degree<T>(order, complementary_modulus_squared);
     const T complete_k = detail::complete_elliptic_k<T>(modulus_squared);
 
     std::vector<T> indices;
-    for (std::size_t j = (order & 1U) != 0U ? 0U : 1U; j < order; j += 2) {
+    for (std::size_t j = (order & 1U) != 0U ? 0U : 1U; j < order; j += 2)
         indices.push_back(static_cast<T>(j));
-    }
 
-    struct JacobiTriple {
-        T sn;
-        T cn;
-        T dn;
-    };
+    struct JacobiTriple { T sn; T cn; T dn; };
     std::vector<JacobiTriple> values;
     values.reserve(indices.size());
     for (const T j : indices) {
@@ -492,8 +485,7 @@ template <Scalar T>
     }
 
     result.gain = (detail::product_negated<T>(result.poles) /
-                   detail::product_negated<T>(result.zeros))
-                      .real();
+                   detail::product_negated<T>(result.zeros)).real();
     if ((order & 1U) == 0U) result.gain /= std::sqrt(T{1} + epsilon_squared);
     return result;
 }
@@ -519,46 +511,55 @@ template <Scalar T>
         poles[i] = {real, -imaginary};
         poles[j] = {real, imaginary};
     }
-    if ((poles.size() & 1U) != 0U) {
+    if ((poles.size() & 1U) != 0U)
         poles[poles.size() / 2] = {poles[poles.size() / 2].real(), T{}};
-    }
     if (std::any_of(poles.begin(), poles.end(),
-                    [](const auto& pole) { return pole.real() >= T{}; })) {
+                    [](const auto& pole) { return pole.real() >= T{}; }))
         throw std::runtime_error("Bessel root solver produced a non-left-half-plane pole");
-    }
 
     const T a0 = coefficients.front();
     T gain = a0;
-    if (normalization == BesselNormalization::phase) {
-        const T scale = std::pow(a0, -T{1} / static_cast<T>(order));
-        for (auto& pole : poles) pole *= scale;
-        gain = T{1};
-    } else if (normalization == BesselNormalization::magnitude_3db) {
-        const Zpk<T> natural{{}, poles, a0};
-        const T target = T{1} / std::sqrt(T{2});
-        T low{};
-        T high{1};
-        while (std::abs(detail::analog_response<T>(natural, {T{}, high})) > target) {
-            high *= T{2};
+    switch (normalization) {
+        case BesselNormalization::phase: {
+            const T scale = std::pow(a0, -T{1} / static_cast<T>(order));
+            for (auto& pole : poles) pole *= scale;
+            gain = T{1};
+            break;
         }
-        for (int iteration = 0; iteration < 96; ++iteration) {
-            const T middle = (low + high) / T{2};
-            if (std::abs(detail::analog_response<T>(natural, {T{}, middle})) > target) {
-                low = middle;
-            } else {
-                high = middle;
+        case BesselNormalization::delay:
+            break;
+        case BesselNormalization::magnitude_3db: {
+            const Zpk<T> natural{{}, poles, a0};
+            const T target = T{1} / std::sqrt(T{2});
+            T low{};
+            T high{1};
+            while (std::abs(detail::analog_response<T>(natural, {T{}, high})) > target) {
+                if (high > std::numeric_limits<T>::max() / T{2})
+                    throw std::runtime_error("Bessel -3 dB normalization failed to bracket the edge");
+                high *= T{2};
             }
+            for (int iteration = 0; iteration < 96; ++iteration) {
+                const T middle = (low + high) / T{2};
+                if (std::abs(detail::analog_response<T>(natural, {T{}, middle})) > target)
+                    low = middle;
+                else
+                    high = middle;
+            }
+            const T w3 = (low + high) / T{2};
+            for (auto& pole : poles) pole /= w3;
+            gain = a0 / std::pow(w3, static_cast<T>(order));
+            break;
         }
-        const T w3 = (low + high) / T{2};
-        for (auto& pole : poles) pole /= w3;
-        gain = a0 / std::pow(w3, static_cast<T>(order));
+        default:
+            throw std::invalid_argument("invalid Bessel normalization");
     }
     return {{}, std::move(poles), gain};
 }
 
 template <Scalar T>
 [[nodiscard]] Zpk<T> lowpass_transform(Zpk<T> zpk, T omega) {
-    if (!(omega > T{})) throw std::invalid_argument("lowpass frequency must be positive");
+    if (!(omega > T{}) || !std::isfinite(omega))
+        throw std::invalid_argument("lowpass frequency must be finite and positive");
     const auto degree = detail::relative_degree<T>(zpk);
     for (auto& zero : zpk.zeros) zero *= omega;
     for (auto& pole : zpk.poles) pole *= omega;
@@ -568,7 +569,8 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] Zpk<T> highpass_transform(Zpk<T> zpk, T omega) {
-    if (!(omega > T{})) throw std::invalid_argument("highpass frequency must be positive");
+    if (!(omega > T{}) || !std::isfinite(omega))
+        throw std::invalid_argument("highpass frequency must be finite and positive");
     const auto degree = detail::relative_degree<T>(zpk);
     const auto old_zeros = zpk.zeros;
     const auto old_poles = zpk.poles;
@@ -582,14 +584,16 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] Zpk<T> bandpass_transform(Zpk<T> zpk, T omega0, T bandwidth) {
-    if (!(omega0 > T{} && bandwidth > T{})) {
-        throw std::invalid_argument("bandpass frequencies must be positive");
-    }
+    if (!(omega0 > T{} && bandwidth > T{}) ||
+        !std::isfinite(omega0) || !std::isfinite(bandwidth))
+        throw std::invalid_argument("bandpass frequencies must be finite and positive");
     const auto degree = detail::relative_degree<T>(zpk);
     std::vector<Complex<T>> zeros;
     std::vector<Complex<T>> poles;
-    zeros.reserve(2 * zpk.zeros.size() + degree);
-    poles.reserve(2 * zpk.poles.size());
+    zeros.reserve(detail::twice_plus(zpk.zeros.size(), degree,
+                                      "bandpass zero count overflows size_t"));
+    poles.reserve(detail::twice_count(zpk.poles.size(),
+                                      "bandpass pole count overflows size_t"));
 
     for (const auto root : zpk.zeros) {
         const auto q = root * (bandwidth / T{2});
@@ -612,16 +616,18 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] Zpk<T> bandstop_transform(Zpk<T> zpk, T omega0, T bandwidth) {
-    if (!(omega0 > T{} && bandwidth > T{})) {
-        throw std::invalid_argument("bandstop frequencies must be positive");
-    }
+    if (!(omega0 > T{} && bandwidth > T{}) ||
+        !std::isfinite(omega0) || !std::isfinite(bandwidth))
+        throw std::invalid_argument("bandstop frequencies must be finite and positive");
     const auto degree = detail::relative_degree<T>(zpk);
     const auto old_zeros = zpk.zeros;
     const auto old_poles = zpk.poles;
     std::vector<Complex<T>> zeros;
     std::vector<Complex<T>> poles;
-    zeros.reserve(2 * zpk.zeros.size() + 2 * degree);
-    poles.reserve(2 * zpk.poles.size());
+    zeros.reserve(detail::twice_sum(zpk.zeros.size(), degree,
+                                     "bandstop zero count overflows size_t"));
+    poles.reserve(detail::twice_count(zpk.poles.size(),
+                                      "bandstop pole count overflows size_t"));
 
     for (const auto root : zpk.zeros) {
         const auto q = (bandwidth / T{2}) / root;
@@ -650,18 +656,17 @@ template <Scalar T>
 // https://en.wikipedia.org/wiki/Bilinear_transform
 template <Scalar T>
 [[nodiscard]] Zpk<T> bilinear_transform(Zpk<T> zpk, T sample_rate = T{1}) {
-    if (!(sample_rate > T{})) throw std::invalid_argument("sample rate must be positive");
+    if (!(sample_rate > T{}) || !std::isfinite(sample_rate))
+        throw std::invalid_argument("sample rate must be finite and positive");
     const auto degree = detail::relative_degree<T>(zpk);
     const T twice_sample_rate = T{2} * sample_rate;
+    if (!std::isfinite(twice_sample_rate))
+        throw std::overflow_error("twice the sample rate is not representable");
     const auto old_zeros = zpk.zeros;
     const auto old_poles = zpk.poles;
 
-    for (auto& zero : zpk.zeros) {
-        zero = (twice_sample_rate + zero) / (twice_sample_rate - zero);
-    }
-    for (auto& pole : zpk.poles) {
-        pole = (twice_sample_rate + pole) / (twice_sample_rate - pole);
-    }
+    for (auto& zero : zpk.zeros) zero = (twice_sample_rate + zero) / (twice_sample_rate - zero);
+    for (auto& pole : zpk.poles) pole = (twice_sample_rate + pole) / (twice_sample_rate - pole);
     zpk.zeros.insert(zpk.zeros.end(), degree, Complex<T>{T{-1}, T{}});
 
     Complex<T> ratio{1, 0};
@@ -674,40 +679,43 @@ template <Scalar T>
 template <Scalar T>
 [[nodiscard]] Zpk<T> digital_from_prototype(Zpk<T> prototype, Response response, T first,
                                              T second = T{}) {
-    if (!(first > T{} && first < T{1})) {
-        throw std::invalid_argument(
-            "digital critical frequencies are normalized to Nyquist and must be in (0,1)");
-    }
+    if (!(first > T{} && first < T{1}))
+        throw std::invalid_argument("digital critical frequencies are normalized to Nyquist and must be in (0,1)");
     const auto prewarp = [](T frequency) {
         return T{2} * std::tan(std::numbers::pi_v<T> * frequency / T{2});
     };
 
-    if (response == Response::lowpass) {
-        prototype = lowpass_transform<T>(std::move(prototype), prewarp(first));
-    } else if (response == Response::highpass) {
-        prototype = highpass_transform<T>(std::move(prototype), prewarp(first));
-    } else {
-        if (!(second > first && second < T{1})) {
-            throw std::invalid_argument("band edges must satisfy 0 < first < second < 1");
+    switch (response) {
+        case Response::lowpass:
+            prototype = lowpass_transform<T>(std::move(prototype), prewarp(first));
+            break;
+        case Response::highpass:
+            prototype = highpass_transform<T>(std::move(prototype), prewarp(first));
+            break;
+        case Response::bandpass:
+        case Response::bandstop: {
+            if (!(second > first && second < T{1}))
+                throw std::invalid_argument("band edges must satisfy 0 < first < second < 1");
+            const T w1 = prewarp(first);
+            const T w2 = prewarp(second);
+            const T center = std::sqrt(w1 * w2);
+            const T bandwidth = w2 - w1;
+            if (response == Response::bandpass)
+                prototype = bandpass_transform<T>(std::move(prototype), center, bandwidth);
+            else
+                prototype = bandstop_transform<T>(std::move(prototype), center, bandwidth);
+            break;
         }
-        const T w1 = prewarp(first);
-        const T w2 = prewarp(second);
-        const T center = std::sqrt(w1 * w2);
-        const T bandwidth = w2 - w1;
-        if (response == Response::bandpass) {
-            prototype = bandpass_transform<T>(std::move(prototype), center, bandwidth);
-        } else {
-            prototype = bandstop_transform<T>(std::move(prototype), center, bandwidth);
-        }
+        default:
+            throw std::invalid_argument("invalid IIR response type");
     }
     return bilinear_transform<T>(std::move(prototype));
 }
 
 template <Scalar T>
 [[nodiscard]] Complex<T> analog_frequency_response(const Zpk<T>& zpk, T angular_frequency) {
-    if (angular_frequency < T{}) {
-        throw std::invalid_argument("analog frequency must be nonnegative");
-    }
+    if (!(angular_frequency >= T{}) || !std::isfinite(angular_frequency))
+        throw std::invalid_argument("analog frequency must be finite and nonnegative");
     return detail::analog_response<T>(zpk, Complex<T>{T{}, angular_frequency});
 }
 
@@ -754,9 +762,8 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] Complex<T> frequency_response(const Zpk<T>& zpk, T normalized_frequency) {
-    if (!(normalized_frequency >= T{} && normalized_frequency <= T{1})) {
+    if (!(normalized_frequency >= T{} && normalized_frequency <= T{1}))
         throw std::invalid_argument("frequency must be normalized to Nyquist in [0,1]");
-    }
     const Complex<T> z =
         std::exp(Complex<T>{T{}, std::numbers::pi_v<T> * normalized_frequency});
     Complex<T> numerator{zpk.gain, T{}};
@@ -774,9 +781,8 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] Coefficients<T> transfer_function(const Zpk<T>& zpk) {
-    if (zpk.zeros.size() != zpk.poles.size()) {
+    if (zpk.zeros.size() != zpk.poles.size())
         throw std::invalid_argument("digital transfer conversion requires equal zero/pole degree");
-    }
     const auto numerator_complex = detail::polynomial_from_roots<T>(zpk.zeros);
     const auto denominator_complex = detail::polynomial_from_roots<T>(zpk.poles);
     Coefficients<T> output;
@@ -786,16 +792,14 @@ template <Scalar T>
 
     for (std::size_t i = 0; i < numerator_complex.size(); ++i) {
         if (std::abs(numerator_complex[i].imag()) >
-            tolerance * (T{1} + std::abs(numerator_complex[i].real()))) {
+            tolerance * (T{1} + std::abs(numerator_complex[i].real())))
             throw std::runtime_error("numerator is not real");
-        }
         output.numerator[i] = zpk.gain * numerator_complex[i].real();
     }
     for (std::size_t i = 0; i < denominator_complex.size(); ++i) {
         if (std::abs(denominator_complex[i].imag()) >
-            tolerance * (T{1} + std::abs(denominator_complex[i].real()))) {
+            tolerance * (T{1} + std::abs(denominator_complex[i].real())))
             throw std::runtime_error("denominator is not real");
-        }
         output.denominator[i] = denominator_complex[i].real();
     }
     return output;
@@ -803,21 +807,18 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] SosDesign<T> second_order_sections(const Zpk<T>& zpk) {
-    if (zpk.zeros.size() != zpk.poles.size()) {
+    if (zpk.zeros.size() != zpk.poles.size())
         throw std::invalid_argument("SOS conversion requires equal zero/pole degree");
-    }
     auto zero_pairs = detail::pair_roots<T>(zpk.zeros);
     auto pole_pairs = detail::pair_roots<T>(zpk.poles);
-    if (zero_pairs.size() != pole_pairs.size()) {
+    if (zero_pairs.size() != pole_pairs.size())
         throw std::runtime_error("zero/pole section count mismatch");
-    }
 
     SosDesign<T> output;
     output.gain = zpk.gain;
     output.sections.reserve(pole_pairs.size());
-    for (std::size_t i = 0; i < pole_pairs.size(); ++i) {
+    for (std::size_t i = 0; i < pole_pairs.size(); ++i)
         output.sections.push_back(detail::section_from_pairs<T>(zero_pairs[i], pole_pairs[i]));
-    }
     return output;
 }
 

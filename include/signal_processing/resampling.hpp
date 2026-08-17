@@ -40,6 +40,12 @@ template <signal_processing::detail::Sample T>
     return std::sin(pix) / pix;
 }
 
+template <signal_processing::detail::Sample T>
+inline void require_coefficients(std::span<const T> coefficients) {
+    if (coefficients.empty())
+        throw std::invalid_argument("FIR resampling requires at least one coefficient");
+}
+
 }  // namespace detail
 
 template <signal_processing::detail::Sample T>
@@ -71,8 +77,10 @@ template <signal_processing::detail::Sample T>
     if (input.size() > std::numeric_limits<std::size_t>::max() / factor)
         throw std::length_error("zero-order-hold size overflows size_t");
     std::vector<T> output(input.size() * factor);
-    for (std::size_t i = 0; i < input.size(); ++i)
-        std::fill_n(output.begin() + static_cast<std::ptrdiff_t>(i * factor), factor, input[i]);
+    for (std::size_t i = 0; i < input.size(); ++i) {
+        auto block = std::span<T>(output).subspan(i * factor, factor);
+        std::fill(block.begin(), block.end(), input[i]);
+    }
     return output;
 }
 
@@ -108,16 +116,20 @@ template <signal_processing::detail::Sample T>
     std::vector<T> output(output_size, T{});
     for (std::size_t m = 0; m < output_size; ++m) {
         const Scalar position = static_cast<Scalar>(m) / static_cast<Scalar>(factor);
-        const auto center = static_cast<std::ptrdiff_t>(m / factor);
-        const auto radius = static_cast<std::ptrdiff_t>(half_width);
+        const std::size_t center = m / factor;
+        const std::size_t left_extent = half_width - 1;
+        const std::size_t left = center >= left_extent ? center - left_extent : 0;
+        const std::size_t right = center +
+            std::min(half_width, input.size() - 1 - center);
         T sum{};
-        for (std::ptrdiff_t n = center - radius + 1; n <= center + radius; ++n) {
-            if (n < 0 || n >= static_cast<std::ptrdiff_t>(input.size())) continue;
+        for (std::size_t n = left;; ++n) {
             const Scalar distance = position - static_cast<Scalar>(n);
-            if (std::abs(distance) >= static_cast<Scalar>(half_width)) continue;
-            const Scalar weight = detail::sinc<T>(distance) *
-                                  detail::sinc<T>(distance / static_cast<Scalar>(half_width));
-            sum += input[static_cast<std::size_t>(n)] * weight;
+            if (std::abs(distance) < static_cast<Scalar>(half_width)) {
+                const Scalar weight = detail::sinc<T>(distance) *
+                                      detail::sinc<T>(distance / static_cast<Scalar>(half_width));
+                sum += input[n] * weight;
+            }
+            if (n == right) break;
         }
         output[m] = sum;
     }
@@ -129,6 +141,7 @@ template <signal_processing::detail::Sample T>
                                                   std::size_t factor,
                                                   std::span<const T> coefficients,
                                                   std::size_t phase = 0) {
+    detail::require_coefficients<T>(coefficients);
     return downsample<T>(convolution::direct<T>(input, coefficients), factor, phase);
 }
 
@@ -136,6 +149,7 @@ template <signal_processing::detail::Sample T>
 [[nodiscard]] inline std::vector<T> interpolate_fir(std::span<const T> input,
                                                      std::size_t factor,
                                                      std::span<const T> coefficients) {
+    detail::require_coefficients<T>(coefficients);
     const auto expanded = upsample_zero<T>(input, factor);
     return convolution::direct<T>(expanded, coefficients);
 }
@@ -145,6 +159,7 @@ template <signal_processing::detail::Sample T>
                                                   std::size_t up_factor,
                                                   std::size_t down_factor,
                                                   std::span<const T> coefficients) {
+    detail::require_coefficients<T>(coefficients);
     if (down_factor == 0) throw std::invalid_argument("downsample factor must be nonzero");
     const auto expanded = upsample_zero<T>(input, up_factor);
     const auto filtered = convolution::direct<T>(expanded, coefficients);
@@ -169,9 +184,10 @@ template <signal_processing::detail::Sample T>
                                                         std::size_t up_factor,
                                                         std::size_t down_factor,
                                                         std::span<const T> coefficients) {
+    detail::require_coefficients<T>(coefficients);
     if (up_factor == 0 || down_factor == 0)
         throw std::invalid_argument("rational resampling factors must be nonzero");
-    if (input.empty() || coefficients.empty()) return {};
+    if (input.empty()) return {};
     const std::size_t expanded_size = detail::checked_upsampled_size(input.size(), up_factor);
     if (expanded_size > std::numeric_limits<std::size_t>::max() - coefficients.size() + 1)
         throw std::length_error("rational FIR output size overflows size_t");

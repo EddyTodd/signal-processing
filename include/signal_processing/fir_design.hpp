@@ -79,6 +79,20 @@ struct GridPoint {
 };
 
 template <fft::Scalar T>
+[[nodiscard]] std::size_t checked_grid_scale(std::size_t density,
+                                             std::size_t cosine_count) {
+    if (cosine_count != 0 && density > std::numeric_limits<std::size_t>::max() / cosine_count)
+        throw std::length_error("Remez grid scale overflows size_t");
+    const std::size_t scale = density * cosine_count;
+    if constexpr (std::numeric_limits<T>::digits < std::numeric_limits<std::size_t>::digits) {
+        const std::size_t exact_limit = std::size_t{1} << std::numeric_limits<T>::digits;
+        if (scale > exact_limit)
+            throw std::length_error("Remez grid size exceeds exact scalar index range");
+    }
+    return scale;
+}
+
+template <fft::Scalar T>
 [[nodiscard]] std::vector<GridPoint<T>> build_grid(std::span<const T> bands,
                                                     std::span<const T> desired,
                                                     std::span<const T> weights,
@@ -90,6 +104,7 @@ template <fft::Scalar T>
     if (desired.size() != band_count || weights.size() != band_count)
         throw std::invalid_argument("Remez desired/weight count must match band count");
     if (density < 4) throw std::invalid_argument("Remez grid density must be at least 4");
+    const std::size_t grid_scale = checked_grid_scale<T>(density, cosine_count);
     std::vector<GridPoint<T>> grid;
     for (std::size_t band = 0; band < band_count; ++band) {
         const T lo = bands[2 * band];
@@ -97,12 +112,14 @@ template <fft::Scalar T>
         check_frequency(lo); check_frequency(hi);
         if (hi < lo || (band != 0 && lo < bands[2 * band - 1]))
             throw std::invalid_argument("Remez bands must be ordered and non-overlapping");
-        if (!(weights[band] > T{0}))
-            throw std::invalid_argument("Remez weights must be positive");
+        if (!std::isfinite(desired[band]))
+            throw std::invalid_argument("Remez desired response must be finite");
+        if (!(weights[band] > T{0}) || !std::isfinite(weights[band]))
+            throw std::invalid_argument("Remez weights must be finite and positive");
         const T width = hi - lo;
-        const std::size_t points = std::max<std::size_t>(2,
-            static_cast<std::size_t>(std::ceil(width * T{2} *
-                static_cast<T>(density * cosine_count))) + 1);
+        const T scaled_points = width * T{2} * static_cast<T>(grid_scale);
+        const std::size_t points = std::max<std::size_t>(
+            2, static_cast<std::size_t>(std::ceil(scaled_points)) + 1);
         for (std::size_t i = 0; i < points; ++i) {
             if (band != 0 && i == 0 && lo == bands[2 * band - 1]) continue;
             const T fraction = static_cast<T>(i) / static_cast<T>(points - 1);
@@ -178,8 +195,34 @@ template <fft::Scalar T>
             best_minimum = minimum; best_sum = sum; best_start = start;
         }
     }
-    return {alternating.begin() + static_cast<std::ptrdiff_t>(best_start),
-            alternating.begin() + static_cast<std::ptrdiff_t>(best_start + count)};
+    std::vector<std::size_t> output;
+    output.reserve(count);
+    for (std::size_t i = 0; i < count; ++i) output.push_back(alternating[best_start + i]);
+    return output;
+}
+
+[[nodiscard]] inline std::vector<std::size_t> evenly_spaced_indices(std::size_t total,
+                                                                    std::size_t count) {
+    if (count < 2 || total < count)
+        throw std::invalid_argument("Remez extrema spacing requires total >= count >= 2");
+    const std::size_t span = total - 1;
+    const std::size_t divisions = count - 1;
+    const std::size_t quotient = span / divisions;
+    const std::size_t remainder = span % divisions;
+    std::vector<std::size_t> output(count);
+    std::size_t position = 0;
+    std::size_t error = 0;
+    for (std::size_t i = 1; i < count; ++i) {
+        position += quotient;
+        if (remainder != 0 && error >= divisions - remainder) {
+            ++position;
+            error -= divisions - remainder;
+        } else {
+            error += remainder;
+        }
+        output[i] = position;
+    }
+    return output;
 }
 
 }  // namespace detail
@@ -256,15 +299,14 @@ template <fft::Scalar T>
     if (tap_count < 3 || (tap_count & 1U) == 0U)
         throw std::invalid_argument("remez_type1 requires an odd tap count >= 3");
     if (max_iterations == 0) throw std::invalid_argument("Remez iteration count must be nonzero");
-    const std::size_t cosine_count = (tap_count + 1) / 2;
+    const std::size_t cosine_count = tap_count / 2 + 1;
     const std::size_t extremum_count = cosine_count + 1;
     const auto grid = detail::build_grid<T>(bands, desired, weights, grid_density, cosine_count);
     if (grid.size() < extremum_count)
         throw std::invalid_argument("Remez grid is too small for the requested tap count");
-    std::vector<std::size_t> extrema(extremum_count);
-    for (std::size_t i = 0; i < extremum_count; ++i)
-        extrema[i] = i * (grid.size() - 1) / (extremum_count - 1);
+    std::vector<std::size_t> extrema = detail::evenly_spaced_indices(grid.size(), extremum_count);
     std::vector<T> solution;
+    bool converged = false;
     for (std::size_t iteration = 0; iteration < max_iterations; ++iteration) {
         solution = detail::exchange_solution<T>(grid, extrema, cosine_count);
         std::vector<T> error(grid.size());
@@ -273,9 +315,14 @@ template <fft::Scalar T>
         auto next = detail::select_extrema<T>(grid, error, extremum_count);
         if (next.size() != extremum_count)
             throw std::runtime_error("Remez exchange failed to preserve the required alternation");
-        if (next == extrema) break;
+        if (next == extrema) {
+            converged = true;
+            break;
+        }
         extrema = std::move(next);
     }
+    if (!converged)
+        throw std::runtime_error("Remez exchange did not converge within max_iterations");
     solution = detail::exchange_solution<T>(grid, extrema, cosine_count);
     std::vector<T> coefficients(tap_count, T{});
     const std::size_t center = tap_count / 2;

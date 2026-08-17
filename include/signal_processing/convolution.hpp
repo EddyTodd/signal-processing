@@ -2,7 +2,6 @@
 
 #include "signal_processing/detail/sample.hpp"
 #include "signal_processing/fft.hpp"
-#include "signal_processing/fft_plans.hpp"
 
 #include <algorithm>
 #include <complex>
@@ -80,9 +79,12 @@ template <signal_processing::detail::Sample T>
         throw std::invalid_argument("circular convolution requires equal lengths");
     const std::size_t n = lhs.size();
     std::vector<T> output(n, T{});
-    for (std::size_t k = 0; k < n; ++k)
-        for (std::size_t j = 0; j < n; ++j)
-            output[k] += lhs[j] * rhs[(k + n - j) % n];
+    for (std::size_t k = 0; k < n; ++k) {
+        for (std::size_t j = 0; j < n; ++j) {
+            const std::size_t index = k >= j ? k - j : n - (j - k);
+            output[k] += lhs[j] * rhs[index];
+        }
+    }
     return output;
 }
 
@@ -150,15 +152,17 @@ template <signal_processing::detail::Sample T>
     plan.forward_inplace(kernel_spectrum);
 
     std::vector<T> output(output_size, T{});
-    for (std::size_t offset = 0; offset < signal.size(); offset += block_size) {
+    std::size_t offset = 0;
+    while (offset < signal.size()) {
         const std::size_t count = std::min(block_size, signal.size() - offset);
         detail::fill_complex<T>(signal.subspan(offset, count), work);
         plan.forward_inplace(work);
         for (std::size_t i = 0; i < transform_size; ++i) work[i] *= kernel_spectrum[i];
         plan.inverse_inplace(work);
         const std::size_t produced = count + kernel.size() - 1;
-        for (std::size_t i = 0; i < produced && offset + i < output.size(); ++i)
+        for (std::size_t i = 0; i < produced && i < output.size() - offset; ++i)
             output[offset + i] += signal_processing::detail::from_complex<T>(work[i]);
+        offset += count;
     }
     return output;
 }
@@ -186,11 +190,11 @@ public:
             throw std::invalid_argument("OverlapSavePlan block size mismatch");
         const std::size_t overlap_size = overlap_.size();
         std::copy(overlap_.begin(), overlap_.end(), time_block_.begin());
-        std::copy(input.begin(), input.end(),
-                  time_block_.begin() + static_cast<std::ptrdiff_t>(overlap_size));
-        if (overlap_size != 0)
-            std::copy(time_block_.end() - static_cast<std::ptrdiff_t>(overlap_size),
-                      time_block_.end(), overlap_.begin());
+        std::copy(input.begin(), input.end(), std::span<T>(time_block_).subspan(overlap_size).begin());
+        if (overlap_size != 0) {
+            const auto tail = std::span<const T>(time_block_).last(overlap_size);
+            std::copy(tail.begin(), tail.end(), overlap_.begin());
+        }
         detail::fill_complex<T>(time_block_, work_);
         plan_.forward_inplace(work_);
         for (std::size_t i = 0; i < transform_size_; ++i) work_[i] *= kernel_spectrum_[i];
@@ -239,16 +243,16 @@ template <signal_processing::detail::Sample T>
     std::size_t consumed = 0;
     while (output.size() < output_size) {
         std::fill(block.begin(), block.end(), T{});
-        const std::size_t count =
-            std::min(block_size, signal.size() - std::min(consumed, signal.size()));
-        if (count != 0)
-            std::copy_n(signal.begin() + static_cast<std::ptrdiff_t>(consumed), count,
-                        block.begin());
+        const std::size_t count = std::min(block_size, signal.size() - std::min(consumed, signal.size()));
+        if (count != 0) {
+            const auto source = signal.subspan(consumed, count);
+            std::copy(source.begin(), source.end(), block.begin());
+        }
         consumed += count;
         plan.process_block(block, produced);
         const std::size_t keep = std::min(block_size, output_size - output.size());
-        output.insert(output.end(), produced.begin(),
-                      produced.begin() + static_cast<std::ptrdiff_t>(keep));
+        const auto valid = std::span<const T>(produced).first(keep);
+        output.insert(output.end(), valid.begin(), valid.end());
     }
     return output;
 }
@@ -273,10 +277,10 @@ public:
         history_[head_] = sample;
         T sum{};
         for (std::size_t k = 0; k < kernel_.size(); ++k) {
-            const std::size_t index = (head_ + kernel_.size() - k) % kernel_.size();
+            const std::size_t index = head_ >= k ? head_ - k : kernel_.size() - (k - head_);
             sum += kernel_[k] * history_[index];
         }
-        head_ = (head_ + 1) % kernel_.size();
+        head_ = head_ + 1 == kernel_.size() ? 0 : head_ + 1;
         return sum;
     }
 
@@ -304,7 +308,7 @@ public:
     UniformPartitionedConvolver(std::span<const T> kernel, std::size_t partition_size)
         : kernel_size_(kernel.size()), partition_size_(partition_size),
           transform_size_(checked_transform_size(kernel_size_, partition_size_)),
-          partition_count_((kernel_size_ + partition_size_ - 1) / partition_size_),
+          partition_count_(1 + (kernel_size_ - 1) / partition_size_),
           plan_(transform_size_),
           kernel_spectra_(partition_count_, std::vector<Complex>(transform_size_)),
           input_history_(partition_count_, std::vector<Complex>(transform_size_)),
@@ -339,10 +343,9 @@ public:
         std::fill(accumulator_.begin(), accumulator_.end(), Complex{});
         for (std::size_t p = 0; p < partition_count_; ++p) {
             const std::size_t history_index =
-                (current_ + partition_count_ - p) % partition_count_;
+                current_ >= p ? current_ - p : partition_count_ - (p - current_);
             for (std::size_t k = 0; k < transform_size_; ++k)
-                accumulator_[k] +=
-                    input_history_[history_index][k] * kernel_spectra_[p][k];
+                accumulator_[k] += input_history_[history_index][k] * kernel_spectra_[p][k];
         }
         work_ = accumulator_;
         plan_.inverse_inplace(work_);
@@ -352,7 +355,7 @@ public:
                 ? signal_processing::detail::from_complex<T>(work_[i + partition_size_])
                 : T{};
         }
-        current_ = (current_ + 1) % partition_count_;
+        current_ = current_ + 1 == partition_count_ ? 0 : current_ + 1;
     }
 
 private:
@@ -395,16 +398,16 @@ template <signal_processing::detail::Sample T>
     std::size_t consumed = 0;
     while (output.size() < output_size) {
         std::fill(input_block.begin(), input_block.end(), T{});
-        const std::size_t count =
-            std::min(partition_size, signal.size() - std::min(consumed, signal.size()));
-        if (count != 0)
-            std::copy_n(signal.begin() + static_cast<std::ptrdiff_t>(consumed), count,
-                        input_block.begin());
+        const std::size_t count = std::min(partition_size, signal.size() - std::min(consumed, signal.size()));
+        if (count != 0) {
+            const auto source = signal.subspan(consumed, count);
+            std::copy(source.begin(), source.end(), input_block.begin());
+        }
         consumed += count;
         convolver.process_block(input_block, output_block);
         const std::size_t keep = std::min(partition_size, output_size - output.size());
-        output.insert(output.end(), output_block.begin(),
-                      output_block.begin() + static_cast<std::ptrdiff_t>(keep));
+        const auto valid = std::span<const T>(output_block).first(keep);
+        output.insert(output.end(), valid.begin(), valid.end());
     }
     return output;
 }

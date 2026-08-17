@@ -71,9 +71,8 @@ template <signal_processing::detail::Sample Sample>
         std::fill(time.begin(), time.end(), Complex{});
         const std::size_t available = offset < input.size() ? input.size() - offset : 0;
         const std::size_t samples = std::min(window.size(), available);
-        for (std::size_t i = 0; i < samples; ++i) {
+        for (std::size_t i = 0; i < samples; ++i)
             time[i] = signal_processing::detail::to_complex(input[offset + i]) * window[i];
-        }
         result.frames.push_back(fft::bluestein<Scalar>(time, fft::Direction::forward));
     }
     return result;
@@ -127,6 +126,11 @@ power_spectrogram(const Result<Sample>& transform, bool one_sided = false) {
     using Scalar = signal_processing::detail::scalar_t<Sample>;
     if (one_sided && signal_processing::detail::SampleTraits<Sample>::is_complex)
         throw std::invalid_argument("one-sided STFT power is defined here only for real input");
+    if (transform.frame_size == 0) {
+        if (!transform.frames.empty())
+            throw std::invalid_argument("STFT frame size must be nonzero when frames are present");
+        return {};
+    }
 
     const std::size_t bins = one_sided ? transform.frame_size / 2 + 1 : transform.frame_size;
     std::vector<std::vector<Scalar>> output;
