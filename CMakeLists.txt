@@ -41,4 +41,8 @@ if(SIGNAL_PROCESSING_BUILD_TESTS)
     add_executable(signal_processing_fir_multirate tests/fir_multirate.cpp)
     signal_processing_configure_test(signal_processing_fir_multirate)
     add_test(NAME signal_processing_fir_multirate COMMAND signal_processing_fir_multirate)
+
+    add_executable(signal_processing_iir tests/iir.cpp)
+    signal_processing_configure_test(signal_processing_iir)
+    add_test(NAME signal_processing_iir COMMAND signal_processing_iir)
 endif()
