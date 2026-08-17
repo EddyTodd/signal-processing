@@ -10,71 +10,69 @@ y[n] = \sum_{k=0}^{M-1} h[k]x[n-k],
 
 with samples before the start of a finite input treated as zero.
 
-`fir::direct`, `fir::fft`, and `fir::overlap_save` return one causal output sample for every supplied input sample. They therefore omit the final \(M-1\) zero-input tail samples. `fir::full_direct` returns the complete finite linear convolution of lengths \(N\) and \(M\), which has length \(N+M-1\).
+`fir::direct`, `fir::fft`, and `fir::overlap_save` return one causal output sample for every supplied input sample, so they omit the final \(M-1\) zero-input tail samples. `fir::full_direct` returns the complete finite linear convolution of lengths \(N\) and \(M\), with length \(N+M-1\).
 
-`fir::Filter<T>` is the sample/block streaming direct form with a circular delay line. `fir::OverlapSaveFilter<T>` is the reusable block form whose transform size is explicit and whose kernel spectrum is precomputed. Neither class selects a method dynamically.
+`fir::Filter<T>` is the sample/block streaming direct form with a circular delay line. `fir::OverlapSaveFilter<T>` is the reusable FFT block form with an explicit transform size and precomputed kernel spectrum. Neither performs method selection.
 
-Real and complex binary32/binary64 samples are supported by the general FIR execution forms. The symmetric and antisymmetric reductions are real linear-phase mechanisms and therefore use real binary32/binary64 samples and coefficients.
+General FIR execution supports binary32/binary64 real and complex samples. The symmetry-reduced methods are real linear-phase mechanisms.
 
-## Linear-phase symmetry reductions
+## Linear-phase reductions
 
-For a symmetric length-\(M\) impulse response,
+For a symmetric impulse response,
 
 \[
 h[k]=h[M-1-k],
 \]
 
-paired products can be written
+paired products become
 
 \[
 h[k]\bigl(x[n-k]+x[n-(M-1-k)]\bigr).
 \]
 
-`fir::symmetric_direct` evaluates that pairing explicitly. For an antisymmetric response,
+`fir::symmetric_direct` evaluates this identity explicitly. For antisymmetric coefficients,
 
 \[
 h[k]=-h[M-1-k],
 \]
 
-`fir::antisymmetric_direct` instead evaluates
+`fir::antisymmetric_direct` evaluates
 
 \[
 h[k]\bigl(x[n-k]-x[n-(M-1-k)]\bigr).
 \]
 
-These methods verify their structural precondition and fail rather than silently falling back to the ordinary direct sum.
+Both methods verify their structural precondition and fail instead of falling back to the ordinary direct sum.
 
 ## FFT FIR execution
 
-`fir::fft` uses the repository's explicit radix-2 zero-padded convolution mechanism. `fir::overlap_save` uses the explicit overlap-save implementation and requires the caller to choose the power-of-two transform size. These functions preserve the FIR causal-output convention by retaining the first \(N\) convolution samples.
+`fir::fft` uses zero-padded radix-2 convolution. `fir::overlap_save` uses the explicit overlap-save implementation and requires the caller to choose the power-of-two transform size. Both preserve the causal FIR convention by retaining the first \(N\) convolution samples.
 
-No crossover threshold, autotuning, or hidden direct/FFT dispatch is part of the FIR API.
+No crossover threshold, autotuning, or direct/FFT dispatcher is part of the FIR API.
 
-## Windowed-sinc FIR design
+## Windowed-sinc design
 
-Frequencies in `fir_design` are normalized in cycles per sample, so Nyquist is \(0.5\). The ideal low-pass impulse response with cutoff \(f_c\) is sampled as
+Frequencies in `fir_design` use cycles per sample, so Nyquist is \(0.5\). The ideal low-pass prototype is
 
 \[
-h[n] = 2f_c\,\operatorname{sinc}\left(2f_c(n-\alpha)\right),
+h[n]=2f_c\,\operatorname{sinc}\left(2f_c(n-\alpha)\right),
 \qquad
 \alpha=\frac{M-1}{2},
 \]
 
-where
+with
 
 \[
 \operatorname{sinc}(x)=\frac{\sin(\pi x)}{\pi x}.
 \]
 
-The finite sequence is multiplied pointwise by the caller-supplied window. `lowpass_windowed_sinc` also has a convenience overload using the repository's symmetric Hann window.
+The finite prototype is multiplied pointwise by the selected window. `lowpass_windowed_sinc` has a convenience overload using a symmetric Hann window. High-pass and band-stop designs use spectral inversion and therefore require an odd tap count; band-pass design subtracts two low-pass prototypes.
 
-High-pass and band-stop designs use spectral inversion and therefore require an odd tap count so the unit impulse lies on an integer center sample. Band-pass design is the difference of two low-pass prototypes.
-
-Filter design is deliberately separate from filter execution: design functions produce coefficient vectors and do not construct or choose a runtime filtering method.
+Design functions only produce coefficients. They do not construct or choose execution methods.
 
 ## Parks-McClellan / Remez exchange
 
-`fir_design::remez_type1` implements the odd-length Type-I linear-phase exchange algorithm. For \(M=2K+1\), the zero-phase response is represented as
+`fir_design::remez_type1` implements odd-length Type-I linear-phase equiripple design. For \(M=2K+1\), the zero-phase response is
 
 \[
 A(f)=a_0+\sum_{k=1}^{K}a_k\cos(2\pi fk).
@@ -86,84 +84,84 @@ At each exchange iteration, \(K+2\) extremal frequencies satisfy
 A(f_i)+\frac{(-1)^i\delta}{W(f_i)}=D(f_i),
 \]
 
-where \(D\) is the desired piecewise-constant response and \(W\) is the positive band weight. The dense-grid weighted error is then searched for alternating extrema and the system is solved again.
+where \(D\) is the desired piecewise-constant response and \(W\) is the positive band weight. A dense grid evaluates the weighted error, alternating extrema are selected, and the system is solved again.
 
-Transition regions between specified bands are not part of the approximation grid. Each pass/stop-band edge is considered independently when extrema are selected, which preserves the alternation problem across discontinuous desired responses.
+Transition regions are not approximation samples. Each specified band edge is treated as its own candidate extremum, so the exchange preserves the alternation problem across discontinuous pass/stop specifications.
 
-The returned Type-I taps are reconstructed from the cosine coefficients as
+The symmetric taps are reconstructed from the cosine coefficients as
 
 \[
 h[K]=a_0,\qquad h[K-k]=h[K+k]=\frac{a_k}{2}.
 \]
 
-`remez_lowpass` is a two-band convenience wrapper. The implementation is a readable exchange algorithm, not an external-library wrapper or an autotuned filter designer.
+`remez_lowpass` is the two-band convenience form.
 
-## Downsampling and zero insertion
+## Elementary rate changes
 
-`resampling::downsample(x, M, phase)` returns
+`resampling::downsample(x,M,phase)` returns
 
 \[
 y[r]=x[\text{phase}+rM].
 \]
 
-`resampling::upsample_zero(x, L)` inserts \(L-1\) zeros between adjacent input samples. For a finite length-\(N\) input it uses the minimal zero-stuffed representation of length
+`resampling::upsample_zero(x,L)` inserts \(L-1\) zeros between adjacent samples. A finite length-\(N\) input uses the minimal zero-stuffed representation
 
 \[
 (N-1)L+1,
 \]
 
-so no artificial trailing zero group is appended after the final original sample.
+with no trailing zero group after the final original sample.
 
-These primitives do not include an anti-alias or anti-imaging filter. The filtered forms make that FIR operation explicit.
+These primitives intentionally do not add anti-alias or anti-imaging filtering.
 
-## FIR decimation and interpolation
+## FIR interpolation, decimation, and rational conversion
 
-`decimate_fir` first applies the causal FIR and then downsamples. `interpolate_fir` performs zero insertion followed by the complete FIR convolution. The library does not multiply interpolation coefficients by \(L\) automatically; any passband-gain normalization belongs to the supplied filter coefficients.
+`interpolate_fir` performs zero insertion followed by the complete finite FIR convolution. `decimate_fir` performs the complete finite FIR convolution first and then downsamples. Keeping the complete finite response makes both operations algebraically consistent with the rational and polyphase forms.
 
-This choice keeps the operation algebraically transparent and makes direct and polyphase forms exactly comparable.
+The library does not multiply interpolation coefficients by \(L\) automatically; any passband-gain normalization belongs to the supplied coefficients.
 
-## Rational sample-rate conversion
-
-For interpolation factor \(L\), decimation factor \(M\), and FIR \(h\), `rational_fir` performs the literal sequence
+For interpolation factor \(L\), decimation factor \(M\), and FIR \(h\), `rational_fir` performs exactly:
 
 1. zero-stuff by \(L\);
 2. linearly convolve with \(h\);
 3. keep every \(M\)-th output sample.
 
-`polyphase_rational` computes the same sequence without materializing or multiplying by inserted zeros. Writing
+## Polyphase rational conversion
+
+Writing
 
 \[
 h_p[q]=h[p+qL],\qquad 0\le p<L,
 \]
 
-and considering output sample \(r\) at high-rate index \(n=rM\), let
+and considering output sample \(r\) at high-rate index \(n=rM\), define
 
 \[
 p=n\bmod L,\qquad c=\left\lfloor\frac{n}{L}\right\rfloor.
 \]
 
-Then
+Then the zero terms of explicit upsampling can be removed algebraically:
 
 \[
-y[r]=\sum_q h_p[q]x[c-q],
+y[r]=\sum_q h_p[q]x[c-q].
 \]
 
-with out-of-range input indices omitted. `polyphase_decompose` exposes the phase decomposition directly; `polyphase_interpolate` and `polyphase_decimate` are the corresponding special cases.
+`polyphase_rational` evaluates this expression directly, so it is equivalent to `rational_fir` without materializing or multiplying by inserted zeros. `polyphase_decompose` exposes the phase decomposition, while `polyphase_interpolate` and `polyphase_decimate` are the \(M=1\) and \(L=1\) special cases.
 
-The public factors and coefficient set are always explicit. There is no rational-factor reduction, filter synthesis, or algorithm selection hidden inside the conversion call.
+Rate factors and coefficients remain explicit. The API does not silently reduce rational factors, design a filter, or choose another implementation.
 
-## Elementary interpolation
+## Elementary interpolation algorithms
 
-The repository also keeps simple interpolation mechanisms as distinct algorithms:
+The repository also exposes simpler interpolation mechanisms separately:
 
-- `zero_order_hold` repeats every sample;
-- `linear` inserts points on straight line segments;
-- `windowed_sinc` evaluates a finite Lanczos-windowed Whittaker-Shannon reconstruction with an explicit sinc half-width.
+- `zero_order_hold` repeats each sample;
+- `linear` inserts points on straight-line segments;
+- `windowed_sinc` evaluates finite Lanczos-windowed Whittaker-Shannon reconstruction with an explicit sinc radius.
 
-The windowed-sinc implementation preserves original sample values at integer sample positions up to floating-point rounding. Its finite support makes it an approximation to ideal infinite sinc reconstruction, and the half-width remains an explicit algorithm parameter.
+The finite sinc form preserves original sample positions up to floating-point rounding but remains an approximation to infinite ideal sinc reconstruction.
 
 ## Numerical behavior
 
-All execution and resampling paths use binary32/binary64 real or complex arithmetic. Different FIR organizations change operation order and therefore need not be bit-identical. Correctness tests compare direct, FFT, overlap-save, streaming, and polyphase forms with format-specific tolerances.
+Execution and resampling use binary32/binary64 real or complex arithmetic. Different FIR organizations change operation order and therefore need not be bit-identical. Correctness tests compare direct, FFT, overlap-save, streaming, and polyphase forms with format-specific tolerances.
 
-The Remez linear system uses partial pivoting and the exchange grid is evaluated in the requested floating-point format. Large/high-order or extremely ill-conditioned specifications can therefore fail explicitly rather than being silently replaced by a different design method.
+The Remez system uses partial pivoting and evaluates the exchange grid in the requested floating-point format. Very high-order or ill-conditioned specifications may therefore fail explicitly rather than being replaced by a different design method.
