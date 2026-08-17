@@ -18,9 +18,20 @@ namespace signal_processing::fir {
 // Finite impulse response filter.
 // https://en.wikipedia.org/wiki/Finite_impulse_response
 
+namespace detail {
+
+template <signal_processing::detail::Sample T>
+inline void require_coefficients(std::span<const T> coefficients) {
+    if (coefficients.empty())
+        throw std::invalid_argument("FIR filtering requires at least one coefficient");
+}
+
+}  // namespace detail
+
 template <signal_processing::detail::Sample T>
 [[nodiscard]] inline std::vector<T> direct(std::span<const T> input,
                                             std::span<const T> coefficients) {
+    detail::require_coefficients<T>(coefficients);
     std::vector<T> output(input.size(), T{});
     for (std::size_t n = 0; n < input.size(); ++n) {
         T sum{};
@@ -34,12 +45,14 @@ template <signal_processing::detail::Sample T>
 template <signal_processing::detail::Sample T>
 [[nodiscard]] inline std::vector<T> full_direct(std::span<const T> input,
                                                  std::span<const T> coefficients) {
+    detail::require_coefficients<T>(coefficients);
     return convolution::direct<T>(input, coefficients);
 }
 
 template <signal_processing::detail::Sample T>
 [[nodiscard]] inline std::vector<T> fft(std::span<const T> input,
                                          std::span<const T> coefficients) {
+    detail::require_coefficients<T>(coefficients);
     if (input.empty()) return {};
     auto output = convolution::fft<T>(input, coefficients);
     output.resize(input.size());
@@ -50,6 +63,7 @@ template <signal_processing::detail::Sample T>
 [[nodiscard]] inline std::vector<T> overlap_save(std::span<const T> input,
                                                   std::span<const T> coefficients,
                                                   std::size_t transform_size) {
+    detail::require_coefficients<T>(coefficients);
     if (input.empty()) return {};
     auto output = convolution::overlap_save<T>(input, coefficients, transform_size);
     output.resize(input.size());
@@ -60,7 +74,9 @@ template <fft::Scalar T>
 [[nodiscard]] inline bool symmetric_coefficients(std::span<const T> coefficients,
                                                   T tolerance = T{8} *
                                                       std::numeric_limits<T>::epsilon()) {
-    if (tolerance < T{0}) throw std::invalid_argument("symmetry tolerance must be nonnegative");
+    if (!(tolerance >= T{0}) || !std::isfinite(tolerance))
+        throw std::invalid_argument("symmetry tolerance must be finite and nonnegative");
+    if (coefficients.empty()) return false;
     for (std::size_t k = 0; k < coefficients.size() / 2; ++k) {
         const T a = coefficients[k];
         const T b = coefficients[coefficients.size() - 1 - k];
@@ -74,7 +90,9 @@ template <fft::Scalar T>
 [[nodiscard]] inline bool antisymmetric_coefficients(std::span<const T> coefficients,
                                                       T tolerance = T{8} *
                                                           std::numeric_limits<T>::epsilon()) {
-    if (tolerance < T{0}) throw std::invalid_argument("antisymmetry tolerance must be nonnegative");
+    if (!(tolerance >= T{0}) || !std::isfinite(tolerance))
+        throw std::invalid_argument("antisymmetry tolerance must be finite and nonnegative");
+    if (coefficients.empty()) return false;
     for (std::size_t k = 0; k < coefficients.size() / 2; ++k) {
         const T a = coefficients[k];
         const T b = coefficients[coefficients.size() - 1 - k];
@@ -93,7 +111,7 @@ template <fft::Scalar T>
 [[nodiscard]] inline std::vector<T> symmetric_direct(std::span<const T> input,
                                                       std::span<const T> coefficients) {
     if (!symmetric_coefficients<T>(coefficients))
-        throw std::invalid_argument("symmetric_direct requires symmetric coefficients");
+        throw std::invalid_argument("symmetric_direct requires nonempty symmetric coefficients");
     std::vector<T> output(input.size(), T{});
     const std::size_t m = coefficients.size();
     const std::size_t pairs = m / 2;
@@ -116,7 +134,7 @@ template <fft::Scalar T>
 [[nodiscard]] inline std::vector<T> antisymmetric_direct(std::span<const T> input,
                                                           std::span<const T> coefficients) {
     if (!antisymmetric_coefficients<T>(coefficients))
-        throw std::invalid_argument("antisymmetric_direct requires antisymmetric coefficients");
+        throw std::invalid_argument("antisymmetric_direct requires nonempty antisymmetric coefficients");
     std::vector<T> output(input.size(), T{});
     const std::size_t m = coefficients.size();
     const std::size_t pairs = m / 2;
@@ -150,7 +168,7 @@ public:
             output += coefficient * delay_[index];
             index = index == 0 ? delay_.size() - 1 : index - 1;
         }
-        write_ = (write_ + 1) % delay_.size();
+        write_ = write_ + 1 == delay_.size() ? 0 : write_ + 1;
         return output;
     }
 
