@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <concepts>
 #include <cstddef>
 #include <span>
@@ -22,12 +23,30 @@ struct Coefficients {
     std::vector<T> denominator;
 };
 
+namespace detail {
+
+template <Scalar T>
+void require_finite(std::span<const T> values, const char* message) {
+    if (!std::all_of(values.begin(), values.end(), [](T value) { return std::isfinite(value); }))
+        throw std::invalid_argument(message);
+}
+
+template <Scalar T>
+void require_finite(T value, const char* message) {
+    if (!std::isfinite(value)) throw std::invalid_argument(message);
+}
+
+}  // namespace detail
+
 template <Scalar T>
 [[nodiscard]] inline Coefficients<T> normalize(std::vector<T> numerator,
                                                 std::vector<T> denominator) {
-    if (numerator.empty() || denominator.empty() || denominator.front() == T{}) {
-        throw std::invalid_argument("IIR coefficients require non-empty b and non-zero a[0]");
-    }
+    if (numerator.empty() || denominator.empty())
+        throw std::invalid_argument("IIR coefficients require nonempty numerator and denominator");
+    detail::require_finite<T>(numerator, "IIR numerator coefficients must be finite");
+    detail::require_finite<T>(denominator, "IIR denominator coefficients must be finite");
+    if (denominator.front() == T{})
+        throw std::invalid_argument("IIR denominator requires nonzero a[0]");
     const T a0 = denominator.front();
     for (auto& value : numerator) value /= a0;
     for (auto& value : denominator) value /= a0;
@@ -59,9 +78,8 @@ public:
     }
 
     void process(std::span<const T> input, std::span<T> output) {
-        if (output.size() < input.size()) {
+        if (output.size() < input.size())
             throw std::invalid_argument("IIR output span is too small");
-        }
         for (std::size_t i = 0; i < input.size(); ++i) output[i] = process(input[i]);
     }
 
@@ -99,9 +117,8 @@ public:
     }
 
     void process(std::span<const T> input, std::span<T> output) {
-        if (output.size() < input.size()) {
+        if (output.size() < input.size())
             throw std::invalid_argument("IIR output span is too small");
-        }
         for (std::size_t i = 0; i < input.size(); ++i) output[i] = process(input[i]);
     }
 
@@ -139,9 +156,8 @@ public:
     }
 
     void process(std::span<const T> input, std::span<T> output) {
-        if (output.size() < input.size()) {
+        if (output.size() < input.size())
             throw std::invalid_argument("IIR output span is too small");
-        }
         for (std::size_t i = 0; i < input.size(); ++i) output[i] = process(input[i]);
     }
 
@@ -171,18 +187,16 @@ public:
     [[nodiscard]] T process(T sample) noexcept {
         if (state_.empty()) return b_[0] * sample;
         const T output = b_[0] * sample + state_[0];
-        for (std::size_t i = 0; i + 1 < state_.size(); ++i) {
+        for (std::size_t i = 0; i + 1 < state_.size(); ++i)
             state_[i] = state_[i + 1] + b_[i + 1] * sample - a_[i + 1] * output;
-        }
         const std::size_t last = state_.size() - 1;
         state_[last] = b_[last + 1] * sample - a_[last + 1] * output;
         return output;
     }
 
     void process(std::span<const T> input, std::span<T> output) {
-        if (output.size() < input.size()) {
+        if (output.size() < input.size())
             throw std::invalid_argument("IIR output span is too small");
-        }
         for (std::size_t i = 0; i < input.size(); ++i) output[i] = process(input[i]);
     }
 
@@ -204,7 +218,10 @@ template <Scalar T>
 class FirstOrderTransposedDirectFormII {
 public:
     explicit FirstOrderTransposedDirectFormII(FirstOrderCoefficients<T> c) {
-        if (c.a0 == T{}) throw std::invalid_argument("first-order section requires non-zero a0");
+        if (!std::isfinite(c.b0) || !std::isfinite(c.b1) || !std::isfinite(c.a0) ||
+            !std::isfinite(c.a1))
+            throw std::invalid_argument("first-order section coefficients must be finite");
+        if (c.a0 == T{}) throw std::invalid_argument("first-order section requires nonzero a0");
         b0_ = c.b0 / c.a0;
         b1_ = c.b1 / c.a0;
         a1_ = c.a1 / c.a0;
@@ -234,11 +251,23 @@ struct BiquadCoefficients {
     T a2{};
 };
 
+namespace detail {
+
+template <Scalar T>
+void validate_biquad(BiquadCoefficients<T> c) {
+    if (!std::isfinite(c.b0) || !std::isfinite(c.b1) || !std::isfinite(c.b2) ||
+        !std::isfinite(c.a0) || !std::isfinite(c.a1) || !std::isfinite(c.a2))
+        throw std::invalid_argument("biquad coefficients must be finite");
+    if (c.a0 == T{}) throw std::invalid_argument("biquad requires nonzero a0");
+}
+
+}  // namespace detail
+
 template <Scalar T>
 class BiquadDirectFormI {
 public:
     explicit BiquadDirectFormI(BiquadCoefficients<T> c) {
-        if (c.a0 == T{}) throw std::invalid_argument("biquad requires non-zero a0");
+        detail::validate_biquad(c);
         b0_ = c.b0 / c.a0;
         b1_ = c.b1 / c.a0;
         b2_ = c.b2 / c.a0;
@@ -265,7 +294,7 @@ template <Scalar T>
 class BiquadDirectFormII {
 public:
     explicit BiquadDirectFormII(BiquadCoefficients<T> c) {
-        if (c.a0 == T{}) throw std::invalid_argument("biquad requires non-zero a0");
+        detail::validate_biquad(c);
         b0_ = c.b0 / c.a0;
         b1_ = c.b1 / c.a0;
         b2_ = c.b2 / c.a0;
@@ -294,7 +323,7 @@ public:
         : BiquadTransposedDirectFormII(BiquadCoefficients<T>{b0, b1, b2, a0, a1, a2}) {}
 
     explicit BiquadTransposedDirectFormII(BiquadCoefficients<T> c) {
-        if (c.a0 == T{}) throw std::invalid_argument("biquad requires non-zero a0");
+        detail::validate_biquad(c);
         b0_ = c.b0 / c.a0;
         b1_ = c.b1 / c.a0;
         b2_ = c.b2 / c.a0;
@@ -320,6 +349,7 @@ class SosCascade {
 public:
     explicit SosCascade(std::vector<BiquadCoefficients<T>> sections, T gain = T{1})
         : coefficients_(std::move(sections)), gain_(gain) {
+        detail::require_finite<T>(gain_, "SOS gain must be finite");
         filters_.reserve(coefficients_.size());
         for (const auto& c : coefficients_) filters_.emplace_back(c);
     }
@@ -331,9 +361,8 @@ public:
     }
 
     void process(std::span<const T> input, std::span<T> output) {
-        if (output.size() < input.size()) {
+        if (output.size() < input.size())
             throw std::invalid_argument("SOS output span is too small");
-        }
         for (std::size_t i = 0; i < input.size(); ++i) output[i] = process(input[i]);
     }
 
