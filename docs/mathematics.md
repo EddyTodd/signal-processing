@@ -61,29 +61,116 @@ The implementations accumulate ordinary floating-point error through additions, 
 
 ## Convolution
 
-Linear convolution is
+For sequences \(x\) and \(h\), linear convolution is
 
 \[
-y_n = \sum_k x_k h_{n-k}.
+y[n] = (x*h)[n] = \sum_k x[k]h[n-k].
 \]
 
-`convolution::direct` evaluates the sum directly. `convolution::fft` zero-pads both operands, transforms them, multiplies pointwise, and applies the inverse transform according to the convolution theorem.
+There is no conjugation in convolution, so the same definition applies to real and complex samples. For finite inputs of lengths \(N\) and \(M\), the full linear result has length \(N+M-1\).
 
-Circular convolution of equal-length sequences is
+`convolution::direct` evaluates this definition in \(O(NM)\) and is the correctness reference. `convolution::fft` chooses a power-of-two transform length \(K\ge N+M-1\), zero-pads both operands, computes
 
 \[
-y_n = \sum_{k=0}^{N-1} x_k h_{(n-k)\bmod N}.
+Y = \operatorname{DFT}_K(x)\,\operatorname{DFT}_K(h),
 \]
+
+pointwise, and applies the inverse transform. The padding is what converts the FFT's circular convolution into the desired linear convolution.
+
+For equal-length sequences, circular convolution is
+
+\[
+y[n] = \sum_{k=0}^{N-1}x[k]h[(n-k)\bmod N].
+\]
+
+`convolution::circular` evaluates the periodic sum directly. `convolution::circular_bluestein` transforms exactly \(N\) samples with Bluestein, so arbitrary circular lengths are represented without padding to a different circular period.
+
+### Overlap-add
+
+Let the input be split into blocks of \(L\) new samples,
+
+\[
+x[n] = \sum_b x_b[n-bL].
+\]
+
+Linearity gives
+
+\[
+x*h = \sum_b (x_b*h)[n-bL].
+\]
+
+`convolution::overlap_add` FFT-convolves each block with the fixed kernel using a transform large enough for that block's complete linear result, then adds the overlapping tails at their shifted positions. The public `block_size` parameter is part of the method; the library does not auto-tune it.
+
+### Overlap-save
+
+For a kernel of length \(M\) and an FFT length \(K\ge M\), overlap-save consumes
+
+\[
+L = K-M+1
+\]
+
+new samples per block. Each transform input consists of the previous \(M-1\) time samples followed by those \(L\) new samples. The length-\(K\) circular convolution contains aliasing in its first \(M-1\) outputs, so those outputs are discarded and the remaining \(L\) are valid linear-convolution samples.
+
+`OverlapSavePlan<T>` stores the fixed kernel spectrum and the \(M-1\)-sample input overlap. `convolution::overlap_save` pads the stream with initial and final zeros as needed to return the complete \(N+M-1\) linear result. The transform length is explicit and must be a power of two because this implementation deliberately uses `Radix2Plan`.
+
+### Streaming direct convolution
+
+`StreamingDirect<T>` keeps the last \(M\) input samples in a circular history buffer and evaluates the defining convolution sum once per new sample. `process()` therefore emits the causal output for the newly supplied sample or block; `flush()` feeds the \(M-1\) trailing zeros required to recover the tail of a finite linear convolution.
+
+### Uniform partitioned convolution
+
+For long fixed kernels, write the kernel as equal time-domain partitions of length \(P\):
+
+\[
+h[n] = \sum_{p=0}^{Q-1} h_p[n-pP].
+\]
+
+Input is processed in matching \(P\)-sample blocks. If \(X_b\) is the FFT of input block \(b\) and \(H_p\) is the precomputed FFT of kernel partition \(p\), a frequency-domain delay line forms
+
+\[
+Y_b[k] = \sum_{p=0}^{Q-1} X_{b-p}[k]H_p[k].
+\]
+
+One inverse FFT produces the current block contribution, and its second half is overlap-added into the next block. `UniformPartitionedConvolver<T>` stores the kernel spectra, input-spectrum history, and time-domain overlap; `convolution::partitioned` is the finite-signal wrapper. `partition_size` remains explicit because latency, memory, and arithmetic work are properties of this algorithmic choice rather than library policy.
+
+### Convolution numerical behavior
+
+All convolution forms support binary32/binary64 real samples and `std::complex<float>` / `std::complex<double>`. FFT-based real convolution performs the arithmetic in the corresponding complex format and returns the real component after inversion; the discarded imaginary component is roundoff, not a second signal channel. Different blocking or partitioning choices change the order of floating-point operations, so cross-method tests use format-specific tolerances instead of requiring bit identity.
 
 ## Correlation
 
-Cross-correlation is implemented using the lag convention
+The library uses the lag convention
 
 \[
-r_{xy}[\ell] = \sum_n x[n]y[n-\ell].
+r_{xy}[\ell] = \sum_n x[n]\overline{y[n-\ell]}.
 \]
 
-Autocorrelation is the special case \(x=y\).
+The complex conjugate is essential for complex signals and disappears for real signals. The returned vector stores lag \(\ell\) at index
+
+\[
+\ell + (|y|-1),
+\]
+
+so zero lag is at index \(|y|-1\).
+
+`correlation::cross_direct` evaluates the sum directly. Reversing and conjugating the second sequence gives
+
+\[
+r_{xy} = x * \operatorname{reverse}(\overline{y}),
+\]
+
+which is the identity used by `correlation::cross_fft`. `auto_direct` and `auto_fft` set \(y=x\); the initial `cross` and `auto_correlation` names remain compatibility aliases for the direct definitions.
+
+For every lag, normalized cross-correlation divides by the energies of the samples that actually overlap at that lag:
+
+\[
+\rho_{xy}[\ell] =
+\frac{r_{xy}[\ell]}
+{\sqrt{\left(\sum_{n\in I_\ell}|x[n]|^2\right)
+       \left(\sum_{n\in I_\ell}|y[n-\ell]|^2\right)}}.
+\]
+
+`normalized_direct` uses the direct numerator; `normalized_fft` uses the FFT numerator. Both compute the overlap energies with prefix sums. If either overlapping segment has zero energy, the normalized value is defined as zero. This is an energy-normalized correlation coefficient, not the separate biased/unbiased lag-count normalization used by some statistical autocorrelation conventions.
 
 ## Discrete cosine transforms
 
@@ -135,4 +222,4 @@ The initial catalog also includes Hamming and Blackman windows. The definitions 
 
 ## Numerical conventions
 
-The library is an algorithm library rather than a benchmark framework. No method silently substitutes another implementation. Filtering objects own only their algorithmic state; benchmarking, timing, statistics, and campaign infrastructure remain outside this repository.
+The library is an algorithm library rather than a benchmark framework. No method silently substitutes another implementation. Stateful objects own only state intrinsic to their algorithm; benchmarking, timing, statistics, campaign orchestration, and reporting remain outside this repository.
