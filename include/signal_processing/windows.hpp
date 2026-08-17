@@ -11,28 +11,31 @@
 
 namespace signal_processing::windows {
 
+template <typename T>
+concept Scalar = std::same_as<T, float> || std::same_as<T, double>;
+
 enum class Sampling { symmetric, periodic };
 
 namespace detail {
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline T denominator(std::size_t n, Sampling sampling) {
     return static_cast<T>(sampling == Sampling::symmetric ? n - 1 : n);
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline T normalized_position(std::size_t i, std::size_t n,
                                            Sampling sampling) {
     return T{2} * static_cast<T>(i) / denominator<T>(n, sampling) - T{1};
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline T phase(std::size_t i, std::size_t n, Sampling sampling) {
     return T{2} * std::numbers::pi_v<T> * static_cast<T>(i) /
            denominator<T>(n, sampling);
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline T bessel_i0(T x) {
     const T y = x * x / T{4};
     T term{1};
@@ -46,7 +49,7 @@ template <std::floating_point T>
     return sum;
 }
 
-template <std::floating_point T, typename Function>
+template <Scalar T, typename Function>
 [[nodiscard]] inline std::vector<T> generate(std::size_t n, Function&& function) {
     std::vector<T> output(n, T{});
     if (n == 0) return output;
@@ -60,12 +63,12 @@ template <std::floating_point T, typename Function>
 
 }  // namespace detail
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> rectangular(std::size_t n) {
     return std::vector<T>(n, T{1});
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> bartlett(std::size_t n,
                                              Sampling sampling = Sampling::symmetric) {
     return detail::generate<T>(n, [=](std::size_t i) {
@@ -73,7 +76,7 @@ template <std::floating_point T>
     });
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> hann(std::size_t n,
                                          Sampling sampling = Sampling::symmetric) {
     return detail::generate<T>(n, [=](std::size_t i) {
@@ -81,7 +84,7 @@ template <std::floating_point T>
     });
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> hamming(std::size_t n,
                                             Sampling sampling = Sampling::symmetric) {
     constexpr double a0 = 0.54;
@@ -92,7 +95,7 @@ template <std::floating_point T>
     });
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> blackman(std::size_t n,
                                              Sampling sampling = Sampling::symmetric) {
     constexpr double a0 = 0.42;
@@ -105,7 +108,7 @@ template <std::floating_point T>
     });
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> blackman_harris(
     std::size_t n, Sampling sampling = Sampling::symmetric) {
     constexpr double a0 = 0.35875;
@@ -120,7 +123,7 @@ template <std::floating_point T>
     });
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> nuttall(std::size_t n,
                                             Sampling sampling = Sampling::symmetric) {
     constexpr double a0 = 0.355768;
@@ -135,7 +138,7 @@ template <std::floating_point T>
     });
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> flat_top(std::size_t n,
                                              Sampling sampling = Sampling::symmetric) {
     constexpr double a0 = 0.21557895;
@@ -152,7 +155,7 @@ template <std::floating_point T>
     });
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> kaiser(std::size_t n, T beta,
                                            Sampling sampling = Sampling::symmetric) {
     if (beta < T{0}) throw std::invalid_argument("Kaiser beta must be nonnegative");
@@ -164,7 +167,7 @@ template <std::floating_point T>
     });
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> gaussian(std::size_t n, T sigma,
                                              Sampling sampling = Sampling::symmetric) {
     if (!(sigma > T{0})) throw std::invalid_argument("Gaussian sigma must be positive");
@@ -174,7 +177,7 @@ template <std::floating_point T>
     });
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> tukey(std::size_t n, T alpha,
                                           Sampling sampling = Sampling::symmetric) {
     if (alpha < T{0} || alpha > T{1}) {
@@ -195,7 +198,7 @@ template <std::floating_point T>
     });
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> lanczos(std::size_t n,
                                             Sampling sampling = Sampling::symmetric) {
     return detail::generate<T>(n, [=](std::size_t i) {
@@ -206,7 +209,7 @@ template <std::floating_point T>
     });
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> welch(std::size_t n,
                                           Sampling sampling = Sampling::symmetric) {
     return detail::generate<T>(n, [=](std::size_t i) {
