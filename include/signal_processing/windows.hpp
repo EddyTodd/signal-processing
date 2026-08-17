@@ -20,7 +20,13 @@ namespace detail {
 
 template <Scalar T>
 [[nodiscard]] inline T denominator(std::size_t n, Sampling sampling) {
-    return static_cast<T>(sampling == Sampling::symmetric ? n - 1 : n);
+    switch (sampling) {
+        case Sampling::symmetric:
+            return static_cast<T>(n - 1);
+        case Sampling::periodic:
+            return static_cast<T>(n);
+    }
+    throw std::invalid_argument("invalid window sampling mode");
 }
 
 template <Scalar T>
@@ -158,7 +164,8 @@ template <Scalar T>
 template <Scalar T>
 [[nodiscard]] inline std::vector<T> kaiser(std::size_t n, T beta,
                                            Sampling sampling = Sampling::symmetric) {
-    if (beta < T{0}) throw std::invalid_argument("Kaiser beta must be nonnegative");
+    if (!(beta >= T{0}) || !std::isfinite(beta))
+        throw std::invalid_argument("Kaiser beta must be finite and nonnegative");
     const T denominator = detail::bessel_i0(beta);
     return detail::generate<T>(n, [=](std::size_t i) {
         const T r = detail::normalized_position<T>(i, n, sampling);
@@ -170,7 +177,8 @@ template <Scalar T>
 template <Scalar T>
 [[nodiscard]] inline std::vector<T> gaussian(std::size_t n, T sigma,
                                              Sampling sampling = Sampling::symmetric) {
-    if (!(sigma > T{0})) throw std::invalid_argument("Gaussian sigma must be positive");
+    if (!(sigma > T{0}) || !std::isfinite(sigma))
+        throw std::invalid_argument("Gaussian sigma must be finite and positive");
     return detail::generate<T>(n, [=](std::size_t i) {
         const T r = detail::normalized_position<T>(i, n, sampling) / sigma;
         return std::exp(-T{0.5} * r * r);
@@ -180,7 +188,7 @@ template <Scalar T>
 template <Scalar T>
 [[nodiscard]] inline std::vector<T> tukey(std::size_t n, T alpha,
                                           Sampling sampling = Sampling::symmetric) {
-    if (alpha < T{0} || alpha > T{1}) {
+    if (!(alpha >= T{0} && alpha <= T{1})) {
         throw std::invalid_argument("Tukey alpha must lie in [0, 1]");
     }
     if (alpha == T{0}) return rectangular<T>(n);
