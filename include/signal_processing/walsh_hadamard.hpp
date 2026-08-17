@@ -13,11 +13,14 @@ namespace signal_processing::walsh_hadamard {
 // Sylvester-ordered Walsh-Hadamard transform.
 // https://en.wikipedia.org/wiki/Fast_Walsh%E2%80%93Hadamard_transform
 
+template <typename T>
+concept Scalar = std::same_as<T, float> || std::same_as<T, double>;
+
 [[nodiscard]] constexpr bool supported_size(std::size_t n) noexcept {
     return n != 0 && (n & (n - 1)) == 0;
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> direct(std::span<const T> input) {
     const std::size_t n = input.size();
     if (n == 0) return {};
@@ -38,7 +41,7 @@ template <std::floating_point T>
     return output;
 }
 
-template <std::floating_point T>
+template <Scalar T>
 inline void fast_inplace(std::span<T> data) {
     const std::size_t n = data.size();
     if (n == 0) return;
@@ -47,8 +50,8 @@ inline void fast_inplace(std::span<T> data) {
     }
 
     for (std::size_t width = 1; width < n; width <<= 1) {
-        const std::size_t span = width << 1;
-        for (std::size_t base = 0; base < n; base += span) {
+        const std::size_t block = width << 1;
+        for (std::size_t base = 0; base < n; base += block) {
             for (std::size_t j = 0; j < width; ++j) {
                 const T a = data[base + j];
                 const T b = data[base + j + width];
@@ -59,7 +62,7 @@ inline void fast_inplace(std::span<T> data) {
     }
 }
 
-template <std::floating_point T>
+template <Scalar T>
 [[nodiscard]] inline std::vector<T> fast(std::span<const T> input) {
     std::vector<T> output(input.begin(), input.end());
     fast_inplace<T>(output);
