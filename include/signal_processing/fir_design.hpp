@@ -15,9 +15,6 @@
 
 namespace signal_processing::fir_design {
 
-// Window-method FIR design.
-// https://en.wikipedia.org/wiki/Finite_impulse_response#Window_design_method
-
 namespace detail {
 
 template <fft::Scalar T>
@@ -47,6 +44,8 @@ template <fft::Scalar T>
                                            std::vector<T> b) {
     const std::size_t n = b.size();
     if (a.size() != n) throw std::invalid_argument("linear system size mismatch");
+    for (std::size_t row = 0; row < n; ++row)
+        if (a[row].size() != n) throw std::invalid_argument("linear system must be square");
     for (std::size_t col = 0; col < n; ++col) {
         std::size_t pivot = col;
         T best = std::abs(a[col][col]);
@@ -57,7 +56,6 @@ template <fft::Scalar T>
         if (best <= T{64} * std::numeric_limits<T>::epsilon())
             throw std::runtime_error("Remez exchange linear system became singular");
         if (pivot != col) { std::swap(a[pivot], a[col]); std::swap(b[pivot], b[col]); }
-
         const T scale = a[col][col];
         for (std::size_t j = col; j < n; ++j) a[col][j] /= scale;
         b[col] /= scale;
@@ -77,6 +75,7 @@ struct GridPoint {
     T frequency{};
     T desired{};
     T weight{};
+    std::size_t band{};
 };
 
 template <fft::Scalar T>
@@ -91,7 +90,6 @@ template <fft::Scalar T>
     if (desired.size() != band_count || weights.size() != band_count)
         throw std::invalid_argument("Remez desired/weight count must match band count");
     if (density < 4) throw std::invalid_argument("Remez grid density must be at least 4");
-
     std::vector<GridPoint<T>> grid;
     for (std::size_t band = 0; band < band_count; ++band) {
         const T lo = bands[2 * band];
@@ -101,15 +99,14 @@ template <fft::Scalar T>
             throw std::invalid_argument("Remez bands must be ordered and non-overlapping");
         if (!(weights[band] > T{0}))
             throw std::invalid_argument("Remez weights must be positive");
-
         const T width = hi - lo;
         const std::size_t points = std::max<std::size_t>(2,
             static_cast<std::size_t>(std::ceil(width * T{2} *
                 static_cast<T>(density * cosine_count))) + 1);
         for (std::size_t i = 0; i < points; ++i) {
             if (band != 0 && i == 0 && lo == bands[2 * band - 1]) continue;
-            const T fraction = points == 1 ? T{} : static_cast<T>(i) / static_cast<T>(points - 1);
-            grid.push_back({lo + width * fraction, desired[band], weights[band]});
+            const T fraction = static_cast<T>(i) / static_cast<T>(points - 1);
+            grid.push_back({lo + width * fraction, desired[band], weights[band], band});
         }
     }
     return grid;
@@ -144,62 +141,50 @@ template <fft::Scalar T>
 }
 
 template <fft::Scalar T>
-[[nodiscard]] std::vector<std::size_t> select_extrema(const std::vector<T>& error,
-                                                       std::size_t count) {
+[[nodiscard]] std::vector<std::size_t> select_extrema(
+    const std::vector<GridPoint<T>>& grid, const std::vector<T>& error, std::size_t count) {
     std::vector<std::size_t> candidates;
-    if (error.empty()) return candidates;
-    candidates.push_back(0);
-    for (std::size_t i = 1; i + 1 < error.size(); ++i) {
-        const T magnitude = std::abs(error[i]);
-        if (magnitude >= std::abs(error[i - 1]) && magnitude >= std::abs(error[i + 1]))
-            candidates.push_back(i);
+    for (std::size_t i = 0; i < grid.size(); ++i) {
+        const bool left_same = i != 0 && grid[i - 1].band == grid[i].band;
+        const bool right_same = i + 1 < grid.size() && grid[i + 1].band == grid[i].band;
+        const bool band_edge = !left_same || !right_same;
+        const bool local_peak = left_same && right_same &&
+                                std::abs(error[i]) >= std::abs(error[i - 1]) &&
+                                std::abs(error[i]) >= std::abs(error[i + 1]);
+        if (band_edge || local_peak) candidates.push_back(i);
     }
-    if (error.size() > 1) candidates.push_back(error.size() - 1);
-
     std::vector<std::size_t> alternating;
     for (const auto index : candidates) {
         if (alternating.empty()) { alternating.push_back(index); continue; }
-        const bool same_sign = std::signbit(error[alternating.back()]) == std::signbit(error[index]);
+        const bool same_sign = (error[alternating.back()] >= T{0}) == (error[index] >= T{0});
         if (same_sign) {
             if (std::abs(error[index]) > std::abs(error[alternating.back()])) alternating.back() = index;
-        } else {
-            alternating.push_back(index);
+        } else alternating.push_back(index);
+    }
+    if (alternating.size() < count) return {};
+    if (alternating.size() == count) return alternating;
+    std::size_t best_start = 0;
+    T best_minimum = T{-1};
+    T best_sum = T{-1};
+    for (std::size_t start = 0; start + count <= alternating.size(); ++start) {
+        T minimum = std::numeric_limits<T>::max();
+        T sum{};
+        for (std::size_t j = 0; j < count; ++j) {
+            const T magnitude = std::abs(error[alternating[start + j]]);
+            minimum = std::min(minimum, magnitude);
+            sum += magnitude;
+        }
+        if (minimum > best_minimum || (minimum == best_minimum && sum > best_sum)) {
+            best_minimum = minimum; best_sum = sum; best_start = start;
         }
     }
-
-    while (alternating.size() > count) {
-        auto it = std::min_element(alternating.begin(), alternating.end(), [&](auto a, auto b) {
-            return std::abs(error[a]) < std::abs(error[b]);
-        });
-        alternating.erase(it);
-        std::vector<std::size_t> collapsed;
-        for (const auto index : alternating) {
-            if (!collapsed.empty() &&
-                std::signbit(error[collapsed.back()]) == std::signbit(error[index])) {
-                if (std::abs(error[index]) > std::abs(error[collapsed.back()])) collapsed.back() = index;
-            } else collapsed.push_back(index);
-        }
-        alternating = std::move(collapsed);
-    }
-
-    if (alternating.size() < count) {
-        std::vector<std::size_t> order(error.size());
-        for (std::size_t i = 0; i < order.size(); ++i) order[i] = i;
-        std::sort(order.begin(), order.end(), [&](auto a, auto b) {
-            return std::abs(error[a]) > std::abs(error[b]);
-        });
-        for (const auto index : order) {
-            if (std::find(alternating.begin(), alternating.end(), index) != alternating.end()) continue;
-            alternating.push_back(index);
-            if (alternating.size() == count) break;
-        }
-        std::sort(alternating.begin(), alternating.end());
-    }
-    return alternating;
+    return {alternating.begin() + static_cast<std::ptrdiff_t>(best_start),
+            alternating.begin() + static_cast<std::ptrdiff_t>(best_start + count)};
 }
 
 }  // namespace detail
 
+// Windowed-sinc low-pass; normalized frequency uses cycles/sample, Nyquist = 0.5.
 template <fft::Scalar T>
 [[nodiscard]] inline std::vector<T> lowpass_windowed_sinc(std::size_t tap_count, T cutoff,
                                                            std::span<const T> window) {
@@ -259,7 +244,6 @@ template <fft::Scalar T>
 }
 
 // Type-I odd-length Parks-McClellan / Remez exchange design.
-// https://en.wikipedia.org/wiki/Remez_algorithm
 // https://en.wikipedia.org/wiki/Parks%E2%80%93McClellan_filter_design_algorithm
 
 template <fft::Scalar T>
@@ -271,30 +255,28 @@ template <fft::Scalar T>
                                                  std::size_t max_iterations = 64) {
     if (tap_count < 3 || (tap_count & 1U) == 0U)
         throw std::invalid_argument("remez_type1 requires an odd tap count >= 3");
+    if (max_iterations == 0) throw std::invalid_argument("Remez iteration count must be nonzero");
     const std::size_t cosine_count = (tap_count + 1) / 2;
     const std::size_t extremum_count = cosine_count + 1;
     const auto grid = detail::build_grid<T>(bands, desired, weights, grid_density, cosine_count);
     if (grid.size() < extremum_count)
         throw std::invalid_argument("Remez grid is too small for the requested tap count");
-
     std::vector<std::size_t> extrema(extremum_count);
     for (std::size_t i = 0; i < extremum_count; ++i)
         extrema[i] = i * (grid.size() - 1) / (extremum_count - 1);
-
     std::vector<T> solution;
     for (std::size_t iteration = 0; iteration < max_iterations; ++iteration) {
         solution = detail::exchange_solution<T>(grid, extrema, cosine_count);
         std::vector<T> error(grid.size());
         for (std::size_t i = 0; i < grid.size(); ++i)
             error[i] = detail::weighted_error<T>(grid[i], solution, cosine_count);
-        auto next = detail::select_extrema<T>(error, extremum_count);
+        auto next = detail::select_extrema<T>(grid, error, extremum_count);
         if (next.size() != extremum_count)
-            throw std::runtime_error("Remez exchange failed to find enough extrema");
+            throw std::runtime_error("Remez exchange failed to preserve the required alternation");
         if (next == extrema) break;
         extrema = std::move(next);
     }
     solution = detail::exchange_solution<T>(grid, extrema, cosine_count);
-
     std::vector<T> coefficients(tap_count, T{});
     const std::size_t center = tap_count / 2;
     coefficients[center] = solution[0];
