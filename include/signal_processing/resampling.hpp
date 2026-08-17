@@ -129,7 +129,7 @@ template <signal_processing::detail::Sample T>
                                                   std::size_t factor,
                                                   std::span<const T> coefficients,
                                                   std::size_t phase = 0) {
-    return downsample<T>(fir::direct<T>(input, coefficients), factor, phase);
+    return downsample<T>(convolution::direct<T>(input, coefficients), factor, phase);
 }
 
 template <signal_processing::detail::Sample T>
