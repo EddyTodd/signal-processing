@@ -38,11 +38,10 @@ namespace detail {
 [[nodiscard]] inline std::size_t next_power_of_two(std::size_t n) {
     if (n <= 1) return 1;
     const auto high = std::size_t{1} << (std::numeric_limits<std::size_t>::digits - 1);
-    if (n > high) throw std::overflow_error("next power of two overflows size_t");
+    if (n > high) throw std::length_error("next power of two overflows size_t");
     --n;
-    for (std::size_t shift = 1; shift < std::numeric_limits<std::size_t>::digits; shift <<= 1) {
+    for (std::size_t shift = 1; shift < std::numeric_limits<std::size_t>::digits; shift <<= 1)
         n |= n >> shift;
-    }
     return n + 1;
 }
 
@@ -66,13 +65,21 @@ namespace detail {
     return n;
 }
 
-[[nodiscard]] inline std::size_t mul_mod(std::size_t a, std::size_t b, std::size_t modulus) noexcept {
+[[nodiscard]] inline std::size_t add_mod(std::size_t a, std::size_t b,
+                                         std::size_t modulus) noexcept {
+    a %= modulus;
+    b %= modulus;
+    return a >= modulus - b ? a - (modulus - b) : a + b;
+}
+
+[[nodiscard]] inline std::size_t mul_mod(std::size_t a, std::size_t b,
+                                         std::size_t modulus) noexcept {
     std::size_t result = 0;
     a %= modulus;
     while (b != 0) {
-        if ((b & 1U) != 0U) result = a >= modulus - result ? a - (modulus - result) : a + result;
+        if ((b & 1U) != 0U) result = add_mod(result, a, modulus);
         b >>= 1;
-        if (b != 0) a = a >= modulus - a ? a - (modulus - a) : a + a;
+        if (b != 0) a = add_mod(a, a, modulus);
     }
     return result;
 }
@@ -117,9 +124,8 @@ namespace detail {
     if (modulus == 0) throw std::invalid_argument("modular inverse modulus must be nonzero");
     using Signed = std::int64_t;
     if (a > static_cast<std::size_t>(std::numeric_limits<Signed>::max()) ||
-        modulus > static_cast<std::size_t>(std::numeric_limits<Signed>::max())) {
+        modulus > static_cast<std::size_t>(std::numeric_limits<Signed>::max()))
         throw std::overflow_error("modular inverse input exceeds supported signed range");
-    }
     Signed t = 0, next_t = 1;
     Signed r = static_cast<Signed>(modulus), next_r = static_cast<Signed>(a % modulus);
     while (next_r != 0) {
@@ -299,7 +305,8 @@ void modified_split_scaled_core(const Vector<T>& input, Vector<T>& scaled, Direc
     for (std::size_t j = 0; j < n / 2; ++j) even_in[j] = input[2 * j];
     for (std::size_t j = 0; j < n / 4; ++j) {
         odd1_in[j] = input[4 * j + 1];
-        odd3_in[j] = input[(4 * j + n - 1) % n];
+        const std::size_t odd3_index = j == 0 ? n - 1 : 4 * j - 1;
+        odd3_in[j] = input[odd3_index];
     }
     Vector<T> even, odd1, odd3;
     modified_split_scaled_core(even_in, even, direction);
@@ -482,26 +489,30 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] inline Vector<T> good_thomas(std::span<const Complex<T>> input,
-                                           std::size_t factor_a = 0, std::size_t factor_b = 0,
-                                           Direction direction = Direction::forward) {
+                                           Direction direction = Direction::forward,
+                                           std::size_t factor_a = 0,
+                                           std::size_t factor_b = 0) {
     const auto n = input.size();
     if (n <= 1) return Vector<T>(input.begin(), input.end());
     if (factor_a == 0 || factor_b == 0) std::tie(factor_a, factor_b) = detail::coprime_factor_split(n);
-    if (factor_a <= 1 || factor_b <= 1 || factor_a * factor_b != n || std::gcd(factor_a, factor_b) != 1)
+    if (factor_a <= 1 || factor_b <= 1 || n % factor_a != 0 || n / factor_a != factor_b ||
+        std::gcd(factor_a, factor_b) != 1)
         throw std::invalid_argument("good_thomas requires a coprime factorization N=a*b");
     const auto inv_b_a = detail::modular_inverse(factor_b % factor_a, factor_a);
     const auto inv_a_b = detail::modular_inverse(factor_a % factor_b, factor_b);
     Vector<T> matrix(n);
     for (std::size_t n1 = 0; n1 < factor_a; ++n1) {
         for (std::size_t n2 = 0; n2 < factor_b; ++n2) {
-            const auto index = (detail::mul_mod(detail::mul_mod(n1, factor_b, n), inv_b_a, n) +
-                                detail::mul_mod(detail::mul_mod(n2, factor_a, n), inv_a_b, n)) % n;
+            const auto first = detail::mul_mod(detail::mul_mod(n1, factor_b, n), inv_b_a, n);
+            const auto second = detail::mul_mod(detail::mul_mod(n2, factor_a, n), inv_a_b, n);
+            const auto index = detail::add_mod(first, second, n);
             matrix[n1 * factor_b + n2] = input[index];
         }
     }
     for (std::size_t n1 = 0; n1 < factor_a; ++n1) {
-        auto row = mixed_radix<T>(std::span<const Complex<T>>(matrix.data() + n1 * factor_b, factor_b), direction);
-        std::copy(row.begin(), row.end(), matrix.begin() + static_cast<std::ptrdiff_t>(n1 * factor_b));
+        auto row_view = std::span<Complex<T>>(matrix).subspan(n1 * factor_b, factor_b);
+        auto row = mixed_radix<T>(row_view, direction);
+        std::copy(row.begin(), row.end(), row_view.begin());
     }
     for (std::size_t k2 = 0; k2 < factor_b; ++k2) {
         Vector<T> column(factor_a);
@@ -510,9 +521,13 @@ template <Scalar T>
         for (std::size_t k1 = 0; k1 < factor_a; ++k1) matrix[k1 * factor_b + k2] = column[k1];
     }
     Vector<T> output(n);
-    for (std::size_t k1 = 0; k1 < factor_a; ++k1)
-        for (std::size_t k2 = 0; k2 < factor_b; ++k2)
-            output[(k1 * factor_b + k2 * factor_a) % n] = matrix[k1 * factor_b + k2];
+    for (std::size_t k1 = 0; k1 < factor_a; ++k1) {
+        for (std::size_t k2 = 0; k2 < factor_b; ++k2) {
+            const auto index = detail::add_mod(detail::mul_mod(k1, factor_b, n),
+                                               detail::mul_mod(k2, factor_a, n), n);
+            output[index] = matrix[k1 * factor_b + k2];
+        }
+    }
     return output;
 }
 
@@ -523,7 +538,7 @@ template <Scalar T>
     if (n <= 1) return Vector<T>(input.begin(), input.end());
     if (n > (std::numeric_limits<std::size_t>::max() / 2) + 1)
         throw std::length_error("bluestein workspace overflow");
-    const auto m = detail::next_power_of_two(2 * n - 1);
+    const auto m = detail::next_power_of_two(n + (n - 1));
     Vector<T> a(m), b(m);
     const T sg = detail::sign<T>(direction);
     for (std::size_t k = 0; k < n; ++k) {
@@ -552,13 +567,16 @@ template <Scalar T>
     if (a.size() != b.size()) throw std::invalid_argument("circular convolution size mismatch");
     const auto n = a.size();
     if (n == 0) return {};
-    const auto m = next_power_of_two(2 * n - 1);
+    if (n > (std::numeric_limits<std::size_t>::max() / 2) + 1)
+        throw std::length_error("circular convolution workspace overflow");
+    const std::size_t linear_size = n + (n - 1);
+    const auto m = next_power_of_two(linear_size);
     a.resize(m); b.resize(m);
     radix2_inplace<T>(a, Direction::forward); radix2_inplace<T>(b, Direction::forward);
     for (std::size_t i = 0; i < m; ++i) a[i] *= b[i];
     radix2_inplace<T>(a, Direction::inverse);
     Vector<T> output(n);
-    for (std::size_t i = 0; i < 2 * n - 1; ++i) output[i % n] += a[i];
+    for (std::size_t i = 0; i < linear_size; ++i) output[i % n] += a[i];
     return output;
 }
 } // namespace detail
