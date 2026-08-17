@@ -33,4 +33,8 @@ if(SIGNAL_PROCESSING_BUILD_TESTS)
     signal_processing_configure_test(signal_processing_convolution_correlation)
     add_test(NAME signal_processing_convolution_correlation
              COMMAND signal_processing_convolution_correlation)
+
+    add_executable(signal_processing_transforms tests/transforms.cpp)
+    signal_processing_configure_test(signal_processing_transforms)
+    add_test(NAME signal_processing_transforms COMMAND signal_processing_transforms)
 endif()
