@@ -3,6 +3,7 @@
 #include <cmath>
 #include <concepts>
 #include <cstddef>
+#include <limits>
 #include <numbers>
 #include <span>
 #include <stdexcept>
@@ -27,7 +28,7 @@ template <Scalar T>
     std::vector<T> output(n, T{});
     for (std::size_t k = 0; k < n; ++k) {
         T sum{};
-        for (std::size_t j = 0; j < 2 * n; ++j) {
+        for (std::size_t j = 0; j < input.size(); ++j) {
             const T angle = std::numbers::pi_v<T> / static_cast<T>(n) *
                             (static_cast<T>(j) + T{0.5} + static_cast<T>(n) / T{2}) *
                             (static_cast<T>(k) + T{0.5});
@@ -42,10 +43,14 @@ template <Scalar T>
 [[nodiscard]] inline std::vector<T> inverse_direct(std::span<const T> input) {
     const std::size_t n = input.size();
     if (n == 0) return {};
+    if (n > std::numeric_limits<std::size_t>::max() / 2) {
+        throw std::length_error("IMDCT output size overflow");
+    }
 
-    std::vector<T> output(2 * n, T{});
+    const std::size_t output_size = 2 * n;
+    std::vector<T> output(output_size, T{});
     const T scale = T{2} / static_cast<T>(n);
-    for (std::size_t j = 0; j < 2 * n; ++j) {
+    for (std::size_t j = 0; j < output_size; ++j) {
         T sum{};
         for (std::size_t k = 0; k < n; ++k) {
             const T angle = std::numbers::pi_v<T> / static_cast<T>(n) *
