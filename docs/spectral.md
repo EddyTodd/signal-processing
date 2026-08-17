@@ -12,7 +12,7 @@ X_m[k] = \sum_{n=0}^{L-1} x[mH+n]w[n]e^{-2\pi i kn/L}.
 
 `stft::bluestein` evaluates every frame with the repository's arbitrary-length Bluestein FFT. The returned frames contain all \(L\) complex DFT bins. The public hop and window are never selected automatically.
 
-With `pad_end=false`, only complete frames are emitted. With `pad_end=true`, frame starts continue while the start offset is inside the finite input and missing samples in the last frames are zero. No centering or implicit leading padding is performed.
+With `pad_end=false`, only complete frames are emitted. With `pad_end=true`, the regular hop sequence is extended only far enough for the last frame to cover the final input sample; missing samples in that final frame are zero. No redundant later tail frames, centering, or implicit leading padding are added.
 
 Real and complex binary32/binary64 sample streams are supported. The analysis window is always real-valued in the corresponding scalar format.
 
@@ -99,7 +99,7 @@ The complex result retains relative phase information. For real signals the same
 
 `spectral::spectrogram_bluestein` applies the periodogram density normalization independently to every STFT frame, producing a time-frequency PSD matrix. Unlike Welch, it does not average frames.
 
-`pad_end` is explicit. `false` keeps only complete frames; `true` uses the STFT zero-padded final-frame convention. One-sided real spectrograms use the same DC/Nyquist/interior-bin scaling as the one-sided periodogram.
+`pad_end` is explicit. `false` keeps only complete frames; `true` uses the minimal zero-padded final-frame convention of `stft::bluestein`. One-sided real spectrograms use the same DC/Nyquist/interior-bin scaling as the one-sided periodogram.
 
 ## Goertzel algorithm
 
