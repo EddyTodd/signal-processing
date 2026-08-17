@@ -66,7 +66,9 @@ void test_arbitrary_length_catalog() {
 
         const auto factors = fft::detail::coprime_factor_split(n);
         if (factors.first > 1) {
-            expect_near<T>(fft::good_thomas<T>(input, factors.first, factors.second), reference, T{10});
+            expect_near<T>(fft::good_thomas<T>(input, fft::Direction::forward,
+                                                factors.first, factors.second),
+                           reference, T{10});
         }
         if (n == 3 || n == 5 || n == 7 || n == 11 || n == 13) {
             expect_near<T>(fft::rader<T>(input), reference, T{20});
