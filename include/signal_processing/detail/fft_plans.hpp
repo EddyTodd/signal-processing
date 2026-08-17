@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <limits>
 #include <memory>
+#include <numbers>
 #include <span>
 #include <stdexcept>
 #include <utility>
@@ -82,17 +84,16 @@ SmallDftCodelet(std::size_t) -> SmallDftCodelet<double>;
 template <Scalar T = double>
 class Radix2Plan {
 public:
-    explicit Radix2Plan(std::size_t n) : n_(n), bit_reverse_(n), twiddles_(n / 2) {
-        if (n == 0 || !detail::is_power_of_two(n))
-            throw std::invalid_argument("Radix2Plan requires a power-of-two length >= 1");
-        const auto bits = detail::ilog2(n);
-        for (std::size_t i = 0; i < n; ++i) {
+    explicit Radix2Plan(std::size_t n)
+        : n_(checked_length(n)), bit_reverse_(n_), twiddles_(n_ / 2) {
+        const auto bits = detail::ilog2(n_);
+        for (std::size_t i = 0; i < n_; ++i) {
             auto x = i; std::size_t reversed = 0;
             for (std::size_t b = 0; b < bits; ++b) { reversed = (reversed << 1) | (x & 1U); x >>= 1; }
             bit_reverse_[i] = reversed;
         }
-        for (std::size_t k = 0; k < n / 2; ++k) {
-            const T angle = -T{2} * std::numbers::pi_v<T> * static_cast<T>(k) / static_cast<T>(n);
+        for (std::size_t k = 0; k < n_ / 2; ++k) {
+            const T angle = -T{2} * std::numbers::pi_v<T> * static_cast<T>(k) / static_cast<T>(n_);
             twiddles_[k] = detail::root<T>(angle);
         }
     }
@@ -112,6 +113,11 @@ public:
     }
 
 private:
+    [[nodiscard]] static std::size_t checked_length(std::size_t n) {
+        if (n == 0 || !detail::is_power_of_two(n))
+            throw std::invalid_argument("Radix2Plan requires a power-of-two length >= 1");
+        return n;
+    }
     void copy_checked(std::span<const Complex<T>> input, std::span<Complex<T>> output) const {
         if (input.size() != n_ || output.size() != n_)
             throw std::invalid_argument("Radix2Plan buffer size mismatch");
@@ -150,11 +156,9 @@ template <Scalar T = double>
 class RealRadix2Plan {
 public:
     explicit RealRadix2Plan(std::size_t n)
-        : n_(n), half_(n / 2), half_plan_(n == 1 ? 1 : n / 2),
-          post_twiddles_(n == 1 ? 1 : n / 2 + 1) {
-        if (n == 0 || !detail::is_power_of_two(n))
-            throw std::invalid_argument("RealRadix2Plan requires a power-of-two length >= 1");
-        if (n == 1) { post_twiddles_[0] = {1, 0}; return; }
+        : n_(checked_length(n)), half_(n_ / 2), half_plan_(n_ == 1 ? 1 : n_ / 2),
+          post_twiddles_(n_ == 1 ? 1 : n_ / 2 + 1) {
+        if (n_ == 1) { post_twiddles_[0] = {1, 0}; return; }
         for (std::size_t k = 0; k <= half_; ++k) {
             const T angle = -T{2} * std::numbers::pi_v<T> * static_cast<T>(k) / static_cast<T>(n_);
             post_twiddles_[k] = detail::root<T>(angle);
@@ -199,6 +203,11 @@ public:
     }
 
 private:
+    [[nodiscard]] static std::size_t checked_length(std::size_t n) {
+        if (n == 0 || !detail::is_power_of_two(n))
+            throw std::invalid_argument("RealRadix2Plan requires a power-of-two length >= 1");
+        return n;
+    }
     void check(std::size_t time_size, std::size_t freq_size, std::size_t scratch_size) const {
         if (time_size != n_ || freq_size != spectrum_size() || scratch_size < this->scratch_size())
             throw std::invalid_argument("RealRadix2Plan buffer size mismatch");
@@ -259,11 +268,17 @@ private:
         const auto radix = choose_small_radix(n);
         if (radix == 0) {
             node->leaf = true; node->radix = n; node->m = 1;
+            if (n > std::numeric_limits<std::size_t>::max() / n)
+                throw std::length_error("MixedRadixPlan direct leaf table overflows size_t");
             node->twiddles.resize(n * n);
-            for (std::size_t k = 0; k < n; ++k)
-                for (std::size_t q = 0; q < n; ++q)
+            for (std::size_t k = 0; k < n; ++k) {
+                for (std::size_t q = 0; q < n; ++q) {
+                    const std::size_t phase = detail::mul_mod(k, q, n);
                     node->twiddles[k * n + q] = detail::root<T>(
-                        -T{2} * std::numbers::pi_v<T> * static_cast<T>(k * q) / static_cast<T>(n));
+                        -T{2} * std::numbers::pi_v<T> * static_cast<T>(phase) /
+                        static_cast<T>(n));
+                }
+            }
             return node;
         }
         node->radix = radix; node->m = n / radix;
@@ -293,7 +308,8 @@ private:
             const T scale = T{1} / static_cast<T>(n);
             for (std::size_t k = 0; k < n; ++k) scratch[k] *= scale;
         }
-        std::copy(scratch.begin(), scratch.begin() + static_cast<std::ptrdiff_t>(n), data.begin());
+        const auto result = scratch.first(n);
+        std::copy(result.begin(), result.end(), data.begin());
     }
 
     static void execute_node(const Node& node, std::span<Complex<T>> data,
@@ -342,14 +358,22 @@ MixedRadixPlan(std::size_t) -> MixedRadixPlan<double>;
 
 template <Scalar T = double>
 class GoodThomasPlan {
+    struct ValidatedFactors {
+        std::size_t a{};
+        std::size_t b{};
+        std::size_t scratch{};
+    };
+
 public:
-    explicit GoodThomasPlan(std::size_t n) : GoodThomasPlan(n, detail::coprime_factor_split(n)) {}
-    GoodThomasPlan(std::size_t n, std::size_t a, std::size_t b) : GoodThomasPlan(n, std::pair{a, b}) {}
+    explicit GoodThomasPlan(std::size_t n)
+        : GoodThomasPlan(n, validate(n, detail::coprime_factor_split(n))) {}
+    GoodThomasPlan(std::size_t n, std::size_t a, std::size_t b)
+        : GoodThomasPlan(n, validate(n, {a, b})) {}
 
     [[nodiscard]] std::size_t size() const noexcept { return n_; }
     [[nodiscard]] std::size_t factor_a() const noexcept { return a_; }
     [[nodiscard]] std::size_t factor_b() const noexcept { return b_; }
-    [[nodiscard]] std::size_t scratch_size() const noexcept { return n_ + 2 * std::max(a_, b_); }
+    [[nodiscard]] std::size_t scratch_size() const noexcept { return scratch_size_; }
     [[nodiscard]] std::size_t twiddle_count() const noexcept { return 0; }
 
     void forward_inplace(std::span<Complex<T>> data, std::span<Complex<T>> scratch) const {
@@ -368,27 +392,41 @@ public:
     }
 
 private:
-    GoodThomasPlan(std::size_t n, std::pair<std::size_t, std::size_t> factors)
-        : n_(n), a_(factors.first), b_(factors.second), a_plan_(a_), b_plan_(b_),
-          input_map_(n), output_map_(n) {
-        if (a_ <= 1 || b_ <= 1 || a_ * b_ != n_ || std::gcd(a_, b_) != 1)
+    [[nodiscard]] static ValidatedFactors validate(
+        std::size_t n, std::pair<std::size_t, std::size_t> factors) {
+        const auto [a, b] = factors;
+        if (a <= 1 || b <= 1 || n % a != 0 || n / a != b || std::gcd(a, b) != 1)
             throw std::invalid_argument("GoodThomasPlan requires coprime N=a*b factors");
+        const std::size_t maximum = std::max(a, b);
+        if (maximum > (std::numeric_limits<std::size_t>::max() - n) / 2)
+            throw std::length_error("GoodThomasPlan scratch size overflows size_t");
+        return {a, b, n + 2 * maximum};
+    }
+
+    GoodThomasPlan(std::size_t n, ValidatedFactors factors)
+        : n_(n), a_(factors.a), b_(factors.b), scratch_size_(factors.scratch),
+          a_plan_(a_), b_plan_(b_), input_map_(n_), output_map_(n_) {
         const auto inv_b_a = detail::modular_inverse(b_ % a_, a_);
         const auto inv_a_b = detail::modular_inverse(a_ % b_, b_);
-        for (std::size_t n1 = 0; n1 < a_; ++n1)
+        for (std::size_t n1 = 0; n1 < a_; ++n1) {
             for (std::size_t n2 = 0; n2 < b_; ++n2) {
                 const auto i = n1 * b_ + n2;
-                input_map_[i] = (detail::mul_mod(detail::mul_mod(n1, b_, n_), inv_b_a, n_) +
-                                 detail::mul_mod(detail::mul_mod(n2, a_, n_), inv_a_b, n_)) % n_;
+                const auto first = detail::mul_mod(detail::mul_mod(n1, b_, n_), inv_b_a, n_);
+                const auto second = detail::mul_mod(detail::mul_mod(n2, a_, n_), inv_a_b, n_);
+                input_map_[i] = detail::add_mod(first, second, n_);
             }
-        for (std::size_t k1 = 0; k1 < a_; ++k1)
-            for (std::size_t k2 = 0; k2 < b_; ++k2)
-                output_map_[k1 * b_ + k2] = (k1 * b_ + k2 * a_) % n_;
+        }
+        for (std::size_t k1 = 0; k1 < a_; ++k1) {
+            for (std::size_t k2 = 0; k2 < b_; ++k2) {
+                output_map_[k1 * b_ + k2] = detail::add_mod(
+                    detail::mul_mod(k1, b_, n_), detail::mul_mod(k2, a_, n_), n_);
+            }
+        }
     }
 
     void execute(std::span<Complex<T>> data, std::span<Complex<T>> scratch,
                  Direction direction) const {
-        if (data.size() != n_ || scratch.size() < scratch_size())
+        if (data.size() != n_ || scratch.size() < scratch_size_)
             throw std::invalid_argument("GoodThomasPlan buffer size mismatch");
         auto matrix = scratch.first(n_);
         const auto max_factor = std::max(a_, b_);
@@ -410,12 +448,12 @@ private:
     }
     void copy_checked(std::span<const Complex<T>> input, std::span<Complex<T>> output,
                       std::span<Complex<T>> scratch) const {
-        if (input.size() != n_ || output.size() != n_ || scratch.size() < scratch_size())
+        if (input.size() != n_ || output.size() != n_ || scratch.size() < scratch_size_)
             throw std::invalid_argument("GoodThomasPlan buffer size mismatch");
         std::copy(input.begin(), input.end(), output.begin());
     }
 
-    std::size_t n_{}, a_{}, b_{};
+    std::size_t n_{}, a_{}, b_{}, scratch_size_{};
     MixedRadixPlan<T> a_plan_, b_plan_;
     std::vector<std::size_t> input_map_, output_map_;
 };
@@ -449,7 +487,7 @@ private:
         if (n == 1) return 1;
         if (n > (std::numeric_limits<std::size_t>::max() / 2) + 1)
             throw std::length_error("BluesteinPlan workspace overflow");
-        return detail::next_power_of_two(2 * n - 1);
+        return detail::next_power_of_two(n + (n - 1));
     }
     [[nodiscard]] static Complex<T> forward_chirp(std::size_t k, std::size_t n) {
         const T phase = detail::chirp_phase_ratio<T>(k, n);
@@ -513,7 +551,7 @@ private:
         if (detail::is_power_of_two(l)) return l;
         if (l > (std::numeric_limits<std::size_t>::max() / 2) + 1)
             throw std::length_error("RaderPlan workspace overflow");
-        return detail::next_power_of_two(2 * l - 1);
+        return detail::next_power_of_two(l + (l - 1));
     }
     void execute(std::span<const Complex<T>> input, std::span<Complex<T>> output,
                  std::span<Complex<T>> scratch, Direction direction) const {
@@ -533,7 +571,7 @@ private:
             output[0] = dc;
             for (std::size_t q = 0; q < l_; ++q) {
                 auto c = work[q];
-                if (!direct_cyclic_ && q + l_ < 2 * l_ - 1) c += work[q + l_];
+                if (!direct_cyclic_ && q < l_ - 1) c += work[q + l_];
                 output[output_permutation_[q]] = x0 + c;
             }
         } else {
@@ -541,7 +579,7 @@ private:
             output[0] = std::conj(dc) * scale;
             for (std::size_t q = 0; q < l_; ++q) {
                 auto c = work[q];
-                if (!direct_cyclic_ && q + l_ < 2 * l_ - 1) c += work[q + l_];
+                if (!direct_cyclic_ && q < l_ - 1) c += work[q + l_];
                 output[output_permutation_[q]] = std::conj(x0 + c) * scale;
             }
         }
