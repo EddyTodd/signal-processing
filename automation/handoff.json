@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "state": "READY_TO_CONTINUE",
+  "task_id": "signal-processing",
+  "work_sha": "f1f2cf604a3a141c103eddc32855b1bbc8713535",
+  "responds_to_run_id": "f1f2cf604a3a-94b80c2c-2dd9823f1a1b941c",
+  "purpose": "Review exact signal_processing Release FAIL report and sanitized diagnostics; identify and fix actual numerical compile/run issues. Then run independent Release, ASan/UBSan, full microbenchmark campaign and update website only with verified measurements. Preserve method identity and do not claim research-grade closure without evidence."
+}
