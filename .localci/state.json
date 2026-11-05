@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "status": "ACTIVE",
+  "task_id": "signal-processing",
+  "goal": "Research-quality C++23 DSP library with numerical correctness, adversarial tests, repeatable local microbenchmarks and an educational website with sourced results",
+  "milestones": [
+    {
+      "id": "numerical-oracle",
+      "status": "IN_PROGRESS",
+      "evidence": "Release assertions and independent seeded FFT/convolution/DCT contracts added; exact local CI still pending"
+    },
+    {
+      "id": "sanitizers",
+      "status": "PENDING",
+      "evidence": "Awaiting actual local ASan/UBSan run"
+    },
+    {
+      "id": "microbenchmark",
+      "status": "PENDING",
+      "evidence": "External coordinator runner being added; no measured results yet"
+    },
+    {
+      "id": "audit",
+      "status": "PENDING",
+      "evidence": "API, numerical edge cases, precision and filter state audit still outstanding"
+    },
+    {
+      "id": "website",
+      "status": "PENDING",
+      "evidence": "Website benchmark explorer requires measured CI artifact"
+    },
+    {
+      "id": "reproducibility",
+      "status": "PENDING",
+      "evidence": "Multi-platform and third-party benchmarks not yet verified"
+    }
+  ],
+  "not_verified": [
+    "No actual WSL CI report for the new task yet",
+    "No measured microbenchmark output yet",
+    "No cross-platform comparison or high-precision reference oracle yet"
+  ],
+  "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
+  "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
+  "next": "Inspect the first actual local CI report for the new numeric test and benchmark campaign; fix failures and iterate."
+}
