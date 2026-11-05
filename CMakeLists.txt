@@ -11,10 +11,10 @@ option(SIGNAL_PROCESSING_BUILD_TESTS "Build correctness tests" ${PROJECT_IS_TOP_
 function(signal_processing_configure_test target)
     target_link_libraries(${target} PRIVATE signal_processing::signal_processing)
     if(MSVC)
-        target_compile_options(${target} PRIVATE /W4 /permissive-)
+        target_compile_options(${target} PRIVATE /W4 /permissive- /UNDEBUG)
     else()
         target_compile_options(${target} PRIVATE
-            -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wdouble-promotion -Wold-style-cast)
+            -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wdouble-promotion -Wold-style-cast -UNDEBUG)
     endif()
 endfunction()
 
@@ -49,4 +49,8 @@ if(SIGNAL_PROCESSING_BUILD_TESTS)
     add_executable(signal_processing_spectral tests/spectral.cpp)
     signal_processing_configure_test(signal_processing_spectral)
     add_test(NAME signal_processing_spectral COMMAND signal_processing_spectral)
+
+    add_executable(signal_processing_numerical_contracts tests/numerical_contracts.cpp)
+    signal_processing_configure_test(signal_processing_numerical_contracts)
+    add_test(NAME signal_processing_numerical_contracts COMMAND signal_processing_numerical_contracts)
 endif()
