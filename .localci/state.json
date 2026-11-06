@@ -17,7 +17,7 @@
     {
       "id": "microbenchmark",
       "status": "PASS_MEASURED_SINGLE_MACHINE",
-      "evidence": "118 binary64 method/shape comparisons measured on Intel i7-13700KF GCC 13.3.0 using repeated samples and reported medians/spread at 19047b0782bf03e3fc4e9716d73f25781c4ef590; float32, third-party and cross-machine still unmeasured. New separately compiled binary32 + binary64 timed comparison is pending a fresh laptop run."
+      "evidence": "118 binary64 method/shape comparisons measured on Intel i7-13700KF GCC 13.3.0 using repeated samples and reported medians/spread at 19047b0782bf03e3fc4e9716d73f25781c4ef590; float32, third-party and cross-machine still unmeasured. New separately compiled binary32 + binary64 timed comparison is pending a fresh laptop run. Matched same-source-hash binary64 direct-DFT timings reviewed for N=16..256 across pinned 5e8707a and 19047b0 campaigns; small single-machine median differences do not prove speed changes."
     },
     {
       "id": "audit",
@@ -39,11 +39,12 @@
     "New analytic DC cancellation regression N=128/256/257 forward/inverse has not yet run in pinned Release or sanitizer CI",
     "New coordinator dual-precision binary32/binary64 microbenchmark campaign has not yet produced laptop timings; website stays on verified binary64-only data until evidence review",
     "IIR exceptional input behavior and stability across broad parameter domains not independently certified",
-    "Cross-compiler/ISA/platform, FFTW/SciPy reference comparisons, throughput and memory campaigns, and arbitrary-precision global error proofs not completed"
+    "Cross-compiler/ISA/platform, FFTW/SciPy reference comparisons, throughput and memory campaigns, and arbitrary-precision global error proofs not completed",
+    "Latest website branch b5a64e5 has verified benchmark provenance but an updated full website build/check has not been separately reviewed for this commit"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Run tightened analytic DC regression under Release and ASan/UBSan plus independent binary32/binary64 native microbenchmarks; inspect all new reports and parser checks before updating website or marking COMPLETE; subsequently extend independent IIR and spectral adversarial oracles.",
+  "next": "Validate new analytic DC test in Release and ASan/UBSan and newly compiled float32 FFT/convolution/DCT/FIR microbenchmarks on the laptop; review matched-precision samples and website build, then extend independent IIR/spectral adversarial oracles. Remain ACTIVE.",
   "current_verified_ci": {
     "status": "PASS",
     "run_id": "19047b0782bf-32ac4220-d21dde9956499eed",
@@ -79,5 +80,5 @@
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
   "website_commit": "b5a64e58ebe4e44d32507f720c58ff0ded6440a9",
-  "coordinator_pending_commit": "f9be5a99b842973e9e42f534c97c8ed01dc8ab7a"
+  "coordinator_pending_commit": "cc8a52e49ba0c06578c2ec698c0bc605fa40a1c5"
 }

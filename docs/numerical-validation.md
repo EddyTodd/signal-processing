@@ -103,3 +103,26 @@ microbenchmarks; fresh float32 samples and this new test must be reviewed
 before reporting either verified. Frequency scaling/thermal state remain
 uncontrolled, and no arbitrary-precision proof, cross-machine/ISA/compiler
 or third-party FFTW/SciPy comparison has been completed.
+
+## Matched binary64 direct-DFT timing check (two pinned campaigns)
+
+Both artifacts used the *same* benchmark source hash, GCC 13.3.0,
+i7-13700KF, `-O3 -DNDEBUG -std=c++23 -march=native`,
+single-thread end-to-end allocating runs, and nine raw samples/case.
+
+| N | Old median ns | New median ns | Old p10–p90 ns | New p10–p90 ns |
+|---:|---:|---:|---:|---:|
+| 16 | 2119.88 | 2103.40 | 2108.45–2182.51 | 2086.51–2227.86 |
+| 32 | 9183.15 | 8921.06 | 9068.11–9432.31 | 8866.87–9033.13 |
+| 64 | 38974.37 | 37662.78 | 37776.94–40330.42 | 37212.21–39006.37 |
+| 128 | 182294.17 | 178681.20 | 180884.24–188237.14 | 176308.78–181511.51 |
+| 256 | 690627.06 | 688272.75 | 684850.06–739604.93 | 685896.44–692804.73 |
+
+Original source: `5e8707acd4b836828418f4177a4c39aa83b0dbc4`,
+report `5e8707acd4b8-358bd155-9b69a8ab6020425d`.
+New source: `19047b0782bf03e3fc4e9716d73f25781c4ef590`,
+report `19047b0782bf-32ac4220-d21dde9956499eed`.
+These are two distinct laptop runs; p10/p90 is within-run observed spread,
+**not a confidence interval**. Differences do not establish a performance
+improvement or regression, and these numbers describe the **binary64 path**,
+not the newly corrected float32 path.
