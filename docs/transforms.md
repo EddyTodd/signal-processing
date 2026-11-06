@@ -151,3 +151,33 @@ w_n=\exp\left[-\frac12\left(\frac{r_n}{\sigma}\right)^2\right],
 where `sigma` is expressed relative to the normalized half-width \(r_n\in[-1,1]\). Tukey requires \(0\le\alpha\le1\); \(\alpha=0\) is rectangular and \(\alpha=1\) is Hann.
 
 All window functions return an empty vector for \(N=0\) and the single value one for \(N=1\). No function silently changes the requested sampling convention or parameter values.
+
+## Goertzel and analytic-signal exceptional-value contracts
+
+The complex Goertzel coefficient at normalized cycles/sample
+frequency \(f\), \(0\le f<1\), follows the forward-DFT convention:
+
+\[
+G(f) = \sum_{n=0}^{N-1} x_n e^{-2\pi i f n}.
+\]
+
+Its recurrence is phase-rotated into the global DFT convention,
+including off-bin frequencies. It rejects out-of-domain frequencies,
+nonfinite real/imaginary input values, and nonfinite intermediate
+recurrence states or final coefficients. `std::invalid_argument`
+denotes bad input and `std::overflow_error` denotes exceeded finite
+scalar range.
+
+The Hilbert analytic signal keeps DC, doubles positive-frequency
+DFT bins and zeros negative-frequency bins; at even lengths the
+Nyquist bin is unchanged. The imaginary part is the discrete Hilbert
+transform and the magnitude is the analytic envelope. The public
+Hilbert calls reject nonfinite real input and nonfinite complex
+analytic output. These checks do not guarantee accuracy for every
+finite input; underflow and cancellation are still possible.
+
+Independent `long double` textbook DFT Goertzel/Hilbert tests passed
+**17/17 Release and 17/17 ASan/UBSan** in
+`68d5e401e63f-f5c623d8-f9d9c92f52a5f0c4` and `68d5e401e63f-d2e69a43-72b81618b891aad9`. **The newly added exceptional-input
+and overflowing-intermediate guards are unverified by laptop CI**,
+so the next source-matched 17-suite run is mandatory.

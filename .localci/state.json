@@ -6,28 +6,28 @@
   "milestones": [
     {
       "id": "numerical-oracle",
-      "status": "PASS_SIXTEEN_STFT_DOMAINS",
-      "evidence": "Exact run 584a2878254e-b9344b34-edce10bd802439ad passed 16/16 Release CTests with assertions enabled, including finite/zero/overflowed STFT weights, inverse complex frame validation and accumulated-overlap error contracts. Independent float32/float64 DFT, convolution, IIR, DCT/FIR, spectral oracles remain covered. New independent Goertzel/Hilbert long-double oracle registered as 17th CTest after verified source; pending laptop CI."
+      "status": "PASS_SEVENTEEN_ANALYTIC",
+      "evidence": "Both pinned same-source reports 68d5e401e63f-f5c623d8-f9d9c92f52a5f0c4 and 68d5e401e63f-d2e69a43-72b81618b891aad9 passed 17/17 active-assertion Release CTests including independent long-double Goertzel off-bin and DFT phase, Hilbert analytic and envelope odd/even/short tests, and preceding FFT/IIR/STFT/spectral/DCT/FIR/convolution oracles. Newly committed Goertzel/Hilbert finite-input/overflow guard regression has NOT been run."
     },
     {
       "id": "sanitizers",
-      "status": "PASS_SIXTEEN_ASAN_UBSAN",
-      "evidence": "Pinned source 584a2878254ea4b2b287be19153ab5f7bb15af35 run 584a2878254e-b9344b34-edce10bd802439ad passed 16/16 ASan and UBSan CTest binaries with -UNDEBUG active. New signal_processing_analytic_oracles fixture after pinned source has not been compiled or sanitized by laptop; next gate 17/17."
+      "status": "PASS_SEVENTEEN_ASAN_UBSAN",
+      "evidence": "Second pinned 68d5e401e63f-d2e69a43-72b81618b891aad9 confirms 17/17 ASan/UBSan CTests with -UNDEBUG assertions; newly committed Goertzel/Hilbert exceptional-value changes after verified source require new 17-suite laptop CI."
     },
     {
       "id": "microbenchmark",
       "status": "PASS_DUAL_PRECISION_MEASURED",
-      "evidence": "Latest independent PASS 584a2878254e-b9344b34-edce10bd802439ad published 236 FFT/convolution/DCT/FIR method/shape cases, 118 native binary32+118 binary64, 9 positive samples each =2124, recomputed median/interpolated p10/p90/MAD and matched precision-shape-regime baseline ratios with no discrepancies; artifact ad2f3224085072652d80f1c9aec60d8650c21c02582baa416fbd48d6acc82a63; i7-13700KF GCC13.3 -O3 -march=native ISA capability metadata. Earlier 584a2878254e-594b7546-54d69b3205978627 same source/benchmark code but all 236 medians different, so no method-level speedup or slowdown inference."
+      "evidence": "Second pinned 68d5e401e63f-d2e69a43-72b81618b891aad9 contains 236 genuine FFT/convolution/DCT/FIR cases (118 native float32 plus 118 float64), 2124 real raw timing samples (nine each), empirical medians/p10/p90/MAD and matched-precision/shape/regime speedups independently audited; artifact SHA256 fc70a02845dfc9b6427ebfda4014f7e555d7d103e5576a1b548eec6fe35989cc, CPU i7-13700KF GCC13.3 -O3 -march=native with 102 available ISA flags. Earlier 68d5e401e63f-f5c623d8-f9d9c92f52a5f0c4 same kernels/compiler/CPU, 236/236 different medians. No algorithm speedup inference."
     },
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "16-suite Release+ASan/UBSan evidence confirms previously unverified STFT finite window and inverse frame/weight/overlap guards. Coverage audit found existing Goertzel tests concentrated on N=15 and a single off-bin frequency; Hilbert tests concentrated on an even N=32 cosine. Added unverified independent long-double textbook direct O(N^2) Goertzel off-bin/DFT-bin phase for empty, prime, odd/even, near-Nyquist/near-one frequencies, real/complex binary32/64 plus direct Hilbert/analytic/envelope oracle for odd/even/short inputs. No numerical tolerances widened."
+      "evidence": "Two complete 17-suite passes verify new long-double mathematical Goertzel and Hilbert oracles. New source fixes Goertzel's acceptance of nonfinite complex/real samples and nonfinite recurrence/answer from huge finite values; Hilbert analytic API rejects nonfinite real samples/final complex output. Adversarial regression added to existing analytic_oracles (no tolerance change); awaiting a fresh laptop 17-suite and sanitizer run. Other exceptional values and near-unit IIR numerical guarantees remain open."
     },
     {
       "id": "website",
-      "status": "PASS_PINNED_SIXTEEN_SUITE_ARTIFACT",
-      "evidence": "Website commit 060c162b17f6df82722606ead7a83559a193b466 pins earlier independently verified same-source 584a2878254e-594b7546-54d69b3205978627 measured GitHub benchmark (SHA256 5ae3e69f7fafd7aa7239fe380f21a9973a0ae761ba1255b3f5bd155ef8e85763) with 236 cases/2124 original samples and precision filters; website workflow 42230381911 PASS Astro 0 errors/0 warnings, all 3/3 benchmark data tests, full build and smoke 23 static+1 proxied route. Latest 584a2878254e-b9344b34-edce10bd802439ad measurement reviewed separately, not mixed into website."
+      "status": "PASS_PINNED_SEVENTEEN_SUITE_ARTIFACT",
+      "evidence": "Verified website feature SHA 525486f2954cea65f881ebe5e4c68e00c3f59762 displays the prior 68d5e401e63f-f5c623d8-f9d9c92f52a5f0c4 exact 17-suite source-matched measured artifact af716476c494388f9a6a7add2de4028b35d773bb7de987fc6680811aedad091e with 236 measured cases/2124 raw timing samples, not merged with newer same-source 68d5e401e63f-d2e69a43-72b81618b891aad9. GitHub Actions 42236331082 passed Astro 0 errors/warnings, 3/3 provenance, site build and smoke 23 static +1 proxied routes."
     },
     {
       "id": "reproducibility",
@@ -36,22 +36,22 @@
     }
   ],
   "not_verified": [
-    "New signal_processing_analytic_oracles 17th CTest on source f11d663 uses independent long-double direct Goertzel off-bin and DFT-bin Fourier reference on real/complex float32/float64 and odd/even/prime/empty lengths, and independently reconstructed real Hilbert analytic/envelope for both float formats. Requires 17/17 Release -UNDEBUG and 17/17 ASan/UBSan laptop CI; no execution evidence yet",
-    "Current post-584a287 17-suite source does not have new measured benchmark/parser evidence; next laptop must publish all 236 matched native binary32/binary64 cases, nine timing samples each, before any website attribution is advanced",
-    "Long double may equal binary64 or have different dynamic range on other platforms; near-one normalized frequencies, huge FFT and power intermediates, high-order IIR conditioning and formal global error/stability remain uncertified",
-    "External FFTW/SciPy and other DSP libraries, independent platform/compiler/ISA, calibrated performance conditions, memory bandwidth/throughput and repeated independent-machine experiments remain unmeasured"
+    "NEW Goertzel real/complex float32/64 nonfinite input and nonfinite recurrence/output overflow guards plus Hilbert real float32/64 finite input/final analytic sample guards and adversarial analytic_oracles regressions committed after verified source 68d5e40; 17/17 Release -UNDEBUG and 17/17 ASan/UBSan laptop CI not yet run for current source",
+    "Current measured benchmark artifact and website provenance are for source 68d5e40 only; new source with Goertzel/Hilbert exceptional-value guards has not been microbenchmarked, parsed or sanctioned by Local CI",
+    "Floating-point result finiteness does not imply accurate finite coefficients; intermediate FFT/power underflow/overflow, high-order near-unit IIR, complete API-wide exceptional-input contracts and global error/stability bounds remain open",
+    "External FFTW/SciPy and competitors, alternate compiler/platform/ISA, thermal/frequency/cache control, memory/throughput and independent multi-machine replication remain unmeasured"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Next laptop worker compile signal_processing_analytic_oracles as 17th CTest, run 17/17 Release -UNDEBUG and 17/17 ASan/UBSan, inspect off-bin Goertzel phase/near-one-frequency and odd/even Hilbert direct-long-double comparison failures without loosening bounds, then publish full 236-case binary32/64 nine-sample timing and benchmark parser results. Review exact next run; website remains on measured 16-suite source. Remain ACTIVE.",
+  "next": "Next laptop CI must compile current Goertzel/Hilbert checks and execute 17/17 assertion-active Release and 17/17 ASan/UBSan CTests, particularly new real/imaginary NaN/Inf and huge finite input overflow regressions; inspect any failures without increasing old tolerances. Require parser self-tests and full 236-case binary32+binary64 9-sample benchmark and source-SHA-matched report before publishing updated website measurements. Maintain ACTIVE.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "584a2878254e-b9344b34-edce10bd802439ad",
-    "source_sha": "584a2878254ea4b2b287be19153ab5f7bb15af35",
-    "config_sha": "b9344b3438397b8f7afc500d6b61cafc73f127c4",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/584a2878254e-b9344b34-edce10bd802439ad",
-    "release_ctest": 16,
-    "asan_ubsan_ctest": 16,
+    "run_id": "68d5e401e63f-d2e69a43-72b81618b891aad9",
+    "source_sha": "68d5e401e63fbdce9392e5f316a1a13144d06668",
+    "config_sha": "d2e69a4341c2034acf1d10f5afe03aa0c4d71ed2",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/68d5e401e63f-d2e69a43-72b81618b891aad9",
+    "release_ctest": 17,
+    "asan_ubsan_ctest": 17,
     "assertions_enabled": true,
     "bench_cases": 236,
     "bench_cases_per_precision": 118,
@@ -63,7 +63,7 @@
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
     "benchmark_source_sha256": "85a3c51d593800ec2c7fc137aeee1bc2f86701c04cf999d66a6bf0fef73a4198",
-    "benchmark_artifact_sha256": "ad2f3224085072652d80f1c9aec60d8650c21c02582baa416fbd48d6acc82a63"
+    "benchmark_artifact_sha256": "fc70a02845dfc9b6427ebfda4014f7e555d7d103e5576a1b548eec6fe35989cc"
   },
   "previous_failed_ci": {
     "status": "FAIL",
@@ -84,15 +84,15 @@
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
-  "website_commit": "060c162b17f6df82722606ead7a83559a193b466",
+  "website_commit": "525486f2954cea65f881ebe5e4c68e00c3f59762",
   "coordinator_pending_commit": null,
   "website_verification": {
     "status": "PASS",
-    "run_id": 42230381911,
+    "run_id": 42236331082,
     "workflow": "Bouncing Balls verification",
-    "tested_sha": "060c162b17f6df82722606ead7a83559a193b466",
-    "tests": "Astro check 0 errors and 0 warnings; benchmark provenance 3/3; full build; smoke 23 static plus 1 proxied route passed",
-    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42230381911"
+    "tested_sha": "525486f2954cea65f881ebe5e4c68e00c3f59762",
+    "tests": "Astro 0 errors and warnings; provenance tests 3/3; full build and 23 static plus 1 proxied route smoke passed",
+    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42236331082"
   },
   "last_resolved_failed_ci": {
     "status": "FAIL",
@@ -109,10 +109,10 @@
     "resolved_in_verified_run": "6e1862fba245-acfb166f-969900ae365f85eb"
   },
   "last_duplicate_run": {
-    "run_id": "584a2878254e-594b7546-54d69b3205978627",
-    "source_sha": "584a2878254ea4b2b287be19153ab5f7bb15af35",
+    "run_id": "68d5e401e63f-f5c623d8-f9d9c92f52a5f0c4",
+    "source_sha": "68d5e401e63fbdce9392e5f316a1a13144d06668",
     "benchmark_source_same": true,
     "compiler_flags_same": true,
-    "performance_difference": "Latest same-source b9344b34 benchmark differs in 236/236 timing medians from earlier 594b7546 benchmark despite identical kernels/CPU/compiler; website deliberately pins prior independently verified 16-suite artifact. No timing-derived change claim."
+    "performance_difference": "All 236 medians differ in the latest d2e69a43 run despite identical benchmark code, compiler flags, and laptop CPU; website pins earlier independently verified 17-suite artifact; no invented aggregation or code-performance claim."
   }
 }

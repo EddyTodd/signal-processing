@@ -685,3 +685,62 @@ with assertions enabled and publish the complete 236-case dual-precision
 benchmark/parser campaign. External FFTW/SciPy baselines,
 cross-compiler/ISA/platform replication, extreme IIR conditioning,
 global numerical proof and controlled machine uncertainty remain open.
+
+## Repeated validated seventeen-suite analytic-oracle campaign
+
+Source `68d5e401e63fbdce9392e5f316a1a13144d06668` has two independently pinned PASS reports:
+- https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/68d5e401e63f-f5c623d8-f9d9c92f52a5f0c4
+- https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/68d5e401e63f-d2e69a43-72b81618b891aad9
+
+The newer configuration `d2e69a4341c2034acf1d10f5afe03aa0c4d71ed2` passed **17/17 Release** and
+**17/17 ASan/UBSan** CTest executables with assertions explicitly active
+(`-UNDEBUG`), including independent direct `long double` Fourier
+Goertzel complex phase and Hilbert analytic/envelope odd/even
+regressions, all earlier spectral/FFT/IIR/FIR/convolution/DCT oracles,
+and benchmark parser self-tests.
+
+The published second artifact SHA-256 `fc70a02845dfc9b6427ebfda4014f7e555d7d103e5576a1b548eec6fe35989cc` contains **236**
+native-precision FFT/convolution/DCT/FIR method-shapes, 118 binary32
+and 118 binary64, **2,124 timed samples** (nine each), with all reported
+median, interpolated p10/p90, MAD and matched precision/shape/regime
+ratios independently checked. On the same i7-13700KF laptop,
+GCC 13.3.0, `-O3 -DNDEBUG -std=c++23 -march=native
+-fno-omit-frame-pointer`, with 102 available CPU ISA flags,
+**all 236 medians differ** from the earlier same-source, same-kernel
+run. This is run-to-run timing variability; it cannot establish a
+speedup or regression. Available ISA metadata does not verify which
+instructions executed.
+
+Website branch `feature/signal-processing-lab-20261105` commit
+`525486f2954cea65f881ebe5e4c68e00c3f59762` pins the
+*earlier* verified 17-suite source-matched artifact SHA-256
+`af716476c494388f9a6a7add2de4028b35d773bb7de987fc6680811aedad091e`.
+It is not merged or averaged with the newer measurement.
+GitHub workflow
+https://github.com/EddyTodd/eddytodd-web/actions/runs/42236331082
+passed Astro 0 errors/0 warnings, all three benchmark provenance
+tests, full build and 23 static plus 1 proxied smoke routes.
+
+### Pending Goertzel/Hilbert exceptional-value contract
+
+Even after independent phase and analytic-signal oracles passed, the
+public Goertzel recurrence accepted NaN/Inf real or imaginary input
+samples and could return nonfinite states or coefficients from huge
+but finite input. Hilbert analytic, transform and envelope calls also
+accepted nonfinite real samples. New source checks reject nonfinite
+Goertzel inputs with `std::invalid_argument`, recurrence/final
+coefficient overflow with `std::overflow_error`, and nonfinite
+Hilbert real input and resulting analytic complex samples. Existing
+`signal_processing_analytic_oracles` additionally checks both public
+Goertzel entry points, complex imaginary components, known finite
+overflow, and all three Hilbert entry points across binary32/binary64.
+The previous independent finite-oracle tolerances were not relaxed.
+**This newer source has not passed laptop CI.** The next report must
+verify **17/17 Release and 17/17 ASan/UBSan**, assertions active,
+and the full measured dual-precision benchmark/parser suite.
+
+There is no proof of bounded error for every finite coefficient,
+no full API-wide exceptional-value certification or high-order IIR
+conditioning guarantee. External FFTW/SciPy comparisons, alternate
+compilers/ISA/platforms, controlled thermal/frequency/caches and
+independent multi-machine performance remain outstanding.
