@@ -201,3 +201,40 @@ specimen/method-specific recurrence and frequency-response failure messages,
 retaining the original tolerances. These fixes remain pending fresh Local CI.
 Previous passing source `60f0923` remains the current verified 9/9 and
 236-case dual-precision evidence.
+
+## Second independently pinned 10-suite pass, and sparse-hop STFT research step
+
+The user's latest report for source `6e1862fba245051f75205401f9ae37981cd533e1`, coordinator
+`bff04cc91ded737fa5cd7803ad344126f9d613dc`, is:
+https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/6e1862fba245-bff04cc9-fbded4472b5b6c9c
+
+All **10/10 Release** and **10/10 ASan/UBSan** tests passed with assertions on,
+including the separately compiled float32/float64 independent IIR reference.
+The 236-case FFT/convolution/DCT/FIR native binary32/binary64 campaign reports
+nine raw samples per case (2,124 total), empirical medians, p10/p90, MAD,
+GCC 13.3.0, i7-13700KF, `-march=native`, CPU capability flags, and pinned
+benchmark source hash `85a3c51d593800ec2c7fc137aeee1bc2f86701c04cf999d66a6bf0fef73a4198`.
+Published benchmark-artifact SHA-256:
+`4e2318c191c1e6cb15e12612af2d5876d3eee4d954b05e3167173497416ed122`.
+
+The earlier `acfb166f` run uses the identical *source*, benchmark code,
+compiler flags and machine, but the timing medians differ for all 236 cases.
+They are two noisy runs, not evidence of an algorithmic speedup or slowdown.
+The website's 236-case precision selector/chart/table now points only to
+the latest real pinned run, in feature commit
+`a8c1459e82c7933a515e7e4d0fd76c6c6149e0ec`.
+GitHub Actions run
+https://github.com/EddyTodd/eddytodd-web/actions/runs/42171664762
+passed Astro type-checking, all three raw-sample provenance tests,
+the static build and smoke checks. Dynamic table method names retain
+semantic row-header cells.
+
+**Not yet verified:** The next source commit `5a48eed796e5fcc8c403342fe90c8fb76696826d`
+bounds padded STFT frame counts for hop larger than frame size (avoids
+fully empty synthetic tail frames) and introduces an independent long-double
+STFT/ISTFT/PSD/Welch/CSD suite. A separate exhaustive frame-grid consistency
+check compared the frame-count formula with independent enumeration over
+866,880 small parameter combinations and found no mismatches; this is
+*not* a Release CTest, sanitizer result or proof for all size_t inputs.
+The new source requires 11/11 Release and 11/11 ASan/UBSan validation
+before reporting the boundary fix as tested.

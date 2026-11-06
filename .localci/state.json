@@ -7,27 +7,27 @@
     {
       "id": "numerical-oracle",
       "status": "PASS_IIR_AND_FFT_FINITE",
-      "evidence": "Pinned 6e1862fba245051f75205401f9ae37981cd533e1 passed 10/10 Release CTests including analytically placed IIR stable poles (float32/float64), independent long-double recurrence, closed-form first-order response and tightened FFT DC cancellation. New independent spectral/STFT oracle and hop>frame boundary regression pending next run."
+      "evidence": "Two independent pinned reports for source 6e1862fba245051f75205401f9ae37981cd533e1 pass all 10/10 Release CTest executables, including long-double IIR oracle and stricter FFT DC cases; latest run 6e1862fba245-bff04cc9-fbded4472b5b6c9c. New STFT spectral direct-long-double oracle and frame gap correction added after this source, require 11-suite validation."
     },
     {
       "id": "sanitizers",
       "status": "PASS_TEN_SUITE_SANITIZED",
-      "evidence": "Pinned 6e1862fba245051f75205401f9ae37981cd533e1 passed 10/10 ASan/UBSan CTests with -UNDEBUG asserts enabled; new STFT spectral oracle and boundary behavior need next sanitizer run."
+      "evidence": "Latest pinned 6e1862fba245-bff04cc9-fbded4472b5b6c9c: all 10/10 ASan/UBSan tests passed with -UNDEBUG assertions enabled. New spectral_oracles target and STFT gap fix have NOT run under sanitizers."
     },
     {
       "id": "microbenchmark",
       "status": "PASS_DUAL_PRECISION_MEASURED",
-      "evidence": "Pinned 6e1862fba245051f75205401f9ae37981cd533e1 published 236 real FFT/convolution/DCT/FIR timing cases, 118 each float32/float64, nine samples each (2124 raw). GCC 13.3.0, i7-13700KF, -march=native and CPU ISA capability flags; empirical p10/p90/MAD, no cross-precision speedup claims."
+      "evidence": "Latest pinned 6e1862fba245-bff04cc9-fbded4472b5b6c9c: 236 cases across convolution, FFT, DCT-II, FIR (118 binary32, 118 binary64), 2,124 raw timing samples (9 per case), GCC 13.3.0 / i7-13700KF with CPU ISA capability flags and compiler flags, empirical median/p10/p90/MAD. Benchmark source identical to prior acfb166f run but all timing medians differ; performance variation is not speedup evidence."
     },
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "IIR long-double and closed-form oracles confirmed in 10-suite Release and sanitizer gates. STFT pad_end hop>frame_size produced redundant all-zero frames; fixed frame-count bound and added independent direct-DFT spectral/PSD/CSD/Welch reconstruction oracle, pending next Local CI."
+      "evidence": "IIR and FFT finite tests confirmed. Source fix on 5a48eed bounds padded STFT frame count for sparse hops; independent analytic O(L²) long-double STFT, inverse overlap, periodogram, Welch, spectrogram, CSD and invalid-domain oracle added for real/complex float32/float64. These new changes await pinned 11-suite CTest and sanitizer evidence."
     },
     {
       "id": "website",
-      "status": "UPDATED_PINNED_BENCHMARK_PENDING_VERIFY",
-      "evidence": "Website 55c3960828572bb3f41fa507189d91fa358d7b63 now cites actual pinned 6e1862fba245-acfb166f-969900ae365f85eb 10-suite 236-case artifact; new website commit needs its own verification workflow. Previous 096e02a website PASS verified."
+      "status": "PASS_LATEST_MEASURED_10_SUITE",
+      "evidence": "Website branch commit a8c1459e82c7933a515e7e4d0fd76c6c6149e0ec uses exactly GitHub artifact 6e1862fba245-bff04cc9-fbded4472b5b6c9c with 236 real binary32+binary64 benchmark cases, separately selectable precision, matched ratios, 2124 raw samples and accessible table row headers. GitHub workflow 42171664762 passed Astro typecheck (0 errors), three benchmark artifact tests, full build and smoke."
     },
     {
       "id": "reproducibility",
@@ -36,20 +36,20 @@
     }
   ],
   "not_verified": [
-    "New independent spectral_oracles CTest executable with native float32/float64 real/complex STFT, Welch/CSD/periodogram oracles and hop>frame boundary correction has not run (11 tests expected per Release and sanitizer build)",
-    "Website artifact-refresh commit 55c3960828572bb3f41fa507189d91fa358d7b63 requires its own build/test workflow verification; earlier website commit passed",
-    "Arbitrary-precision global error bounds, full NaN/Inf/overflow contracts across DSP API, IIR high-order near-unit pole conditioning and cross-machine statistical replication remain uncertified",
-    "External FFTW/SciPy baselines, alternate compiler/ISA/platform benchmarks and memory/throughput studies remain unmeasured"
+    "New spectral_oracles CTest executable on pending source 5a48eed, real/complex float32+float64 independent long-double STFT/inverse/PSD/Welch/CSD cases and sparse-hop frame-count correction have NOT run through the expected 11/11 Release and 11/11 ASan/UBSan gates",
+    "Latest 236-case benchmark has not been rerun on source after the STFT source modification; existing 10/10 and benchmark evidence concerns prior source 6e1862f",
+    "Full DSP NaN/Inf/overflow contract survey, arbitrary-precision error guarantees and high-order/near-unit IIR conditioning remain open",
+    "Alternative compiler/ISA/platform, FFTW/SciPy external baseline, memory/throughput study and independent multi-machine replication have not been measured"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Verify 11/11 Release and ASan/UBSan including new direct long-double spectral_oracles; run complete dual-precision benchmarks, review raw artifacts, and confirm website refresh GitHub workflow. If the STFT gap/padding oracle fails, repair real boundary semantics without weakening tolerances. Continue broader research after evidence.",
+  "next": "Local laptop must compile and run new spectral_oracles target (expect 11/11 Release and ASan/UBSan with assert active), verify sparse-hop STFT no empty padding frames, independently check published 236-case float32/float64 benchmark & parser results, then inspect new GitHub report. If failing, fix numerical contract without relaxing bounds. Remain ACTIVE.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "6e1862fba245-acfb166f-969900ae365f85eb",
+    "run_id": "6e1862fba245-bff04cc9-fbded4472b5b6c9c",
     "source_sha": "6e1862fba245051f75205401f9ae37981cd533e1",
-    "config_sha": "acfb166f8e9c2a72e5a57e5bed8eb558c8d93fb1",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/6e1862fba245-acfb166f-969900ae365f85eb",
+    "config_sha": "bff04cc91ded737fa5cd7803ad344126f9d613dc",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/6e1862fba245-bff04cc9-fbded4472b5b6c9c",
     "release_ctest": 10,
     "asan_ubsan_ctest": 10,
     "assertions_enabled": true,
@@ -62,7 +62,8 @@
     ],
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
-    "benchmark_artifact_sha256": "ccefa92d3c9c9bcf66c2a71edd434050ad6e3a1caed02267267cce517a68b346"
+    "benchmark_source_sha256": "85a3c51d593800ec2c7fc137aeee1bc2f86701c04cf999d66a6bf0fef73a4198",
+    "benchmark_artifact_sha256": "4e2318c191c1e6cb15e12612af2d5876d3eee4d954b05e3167173497416ed122"
   },
   "previous_failed_ci": {
     "status": "FAIL",
@@ -83,15 +84,15 @@
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
-  "website_commit": "55c3960828572bb3f41fa507189d91fa358d7b63",
+  "website_commit": "a8c1459e82c7933a515e7e4d0fd76c6c6149e0ec",
   "coordinator_pending_commit": null,
   "website_verification": {
     "status": "PASS",
-    "run_id": 42169512038,
+    "run_id": 42171664762,
     "workflow": "Bouncing Balls verification",
-    "tested_sha": "096e02aaa61bf345dc7fc7e50549ddb9afd4711c",
-    "tests": "Astro check, npm run test:signal:results 3/3, site build and smoke passed",
-    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42169512038"
+    "tested_sha": "a8c1459e82c7933a515e7e4d0fd76c6c6149e0ec",
+    "tests": "Astro check 0 errors; benchmark provenance/statistics 3/3; full build and smoke passed",
+    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42171664762"
   },
   "last_resolved_failed_ci": {
     "status": "FAIL",
@@ -106,5 +107,12 @@
     "benchmark": "not executed",
     "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/d066ee6d0865-0d022547-ec5d160c55a751b2",
     "resolved_in_verified_run": "6e1862fba245-acfb166f-969900ae365f85eb"
+  },
+  "last_duplicate_run": {
+    "run_id": "6e1862fba245-acfb166f-969900ae365f85eb",
+    "source_sha": "6e1862fba245051f75205401f9ae37981cd533e1",
+    "benchmark_source_same": true,
+    "compiler_flags_same": true,
+    "performance_difference": "Distinct raw timings across all 236 matched shapes; no cross-run speedup claims."
   }
 }
