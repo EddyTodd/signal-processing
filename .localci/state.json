@@ -40,11 +40,12 @@
     "IIR exceptional input and filter stability on broad parameter domains not independently certified",
     "Third-party FFTW/SciPy comparison, cross-compiler/cross-platform/ISA benchmark and float32 performance campaign not conducted",
     "No arbitrary-precision global error proof or full DSP API audit",
-    "Expanded 24-size multi-seed precision suite FAILS for float32; exact failing input/algorithm pending CI diagnostic; do not mark baseline PASS for this revision"
+    "Expanded 24-size multi-seed precision suite FAILS for float32; exact failing input/algorithm pending CI diagnostic; do not mark baseline PASS for this revision",
+    "The float32 direct DFT binary64-accumulation fix is committed but not yet tested in local CI"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Inspect per-algorithm numerical mismatch diagnostic from the next source CI run. Fix actual algorithm or derive precision-scaled defensible bound; do not loosen tolerance without evidence.",
+  "next": "Run source-level float32 direct DFT binary64-accumulation fix through Release/ASan-UBSan and microbenchmark CI; inspect any remaining mismatches and measured direct DFT regression, then move on to other algorithm families.",
   "current_verified_ci": {
     "status": "PASS",
     "run_id": "5e8707acd4b8-358bd155-9b69a8ab6020425d",
@@ -60,12 +61,21 @@
   },
   "current_failed_ci": {
     "status": "FAIL",
-    "source_sha": "a07e7ec3aba685b76e2e6fb71cb561641ced8e7f",
-    "run_id": "a07e7ec3aba6-37a1862a-95cb756cf5491fcb",
+    "run_id": "586e4b52f74d-348e2e17-e28b3d2a64762719",
+    "tested_sha": "586e4b52f74dc33332ea06d31861e3da0c737646",
     "stage": "release-numerical-tests",
-    "passed_ctest": 8,
-    "total_ctest": 9,
-    "failure": "float32 long-double-oracle numerical_precision error exceeded unchanged 0.0008*(1+abs(reference)) bound; exact method/input currently unknown",
-    "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/a07e7ec3aba6-37a1862a-95cb756cf5491fcb"
+    "passed": 8,
+    "total": 9,
+    "diagnosed_case": {
+      "precision": "float32",
+      "algorithm": "direct",
+      "n": 256,
+      "pattern": "dc",
+      "seed": 2974,
+      "frequency_bin": 224,
+      "observed_abs_error": 0.0012341570527194862,
+      "original_bound": 0.0008
+    },
+    "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   }
 }

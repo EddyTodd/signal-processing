@@ -60,3 +60,18 @@ passed. An assertion reported a float32 error greater than the original
 The follow-up adds explicit method/size/pattern/seed/phase/index and observed
 error/bound diagnostics, **without changing the numerical acceptance tolerance**.
 The algorithm and cause remain unverified until new actual CI evidence arrives.
+
+## Diagnosed float32 direct DFT cancellation (2026-11-06)
+
+The exact CI diagnostic run `586e4b52f74d-348e2e17-e28b3d2a64762719`
+identified the first expanded-suite failure as `float32 / direct / N=256 /
+constant DC / k=224`, with observed absolute error ≈0.001234 and an
+unchanged allowed bound of 0.0008. The independent long-double reference is
+approximately zero in that bin. The direct O(N²) implementation used float32
+angles, trigonometric roots and summation; this is a cancellation-sensitive
+path. The proposed fix computes *only the float32 direct DFT internal phase
+and accumulation* in binary64 and rounds to float32 at the output, while
+retaining the public API and the binary64 path. It has **not yet passed local
+CI** and might alter direct-DFT timings; the follow-up run must test both
+accuracy and performance before reporting a resolved issue. The finite
+error bound was not loosened.

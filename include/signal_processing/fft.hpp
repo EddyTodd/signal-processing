@@ -13,6 +13,7 @@
 #include <span>
 #include <stdexcept>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -176,15 +177,30 @@ template <Scalar T>
     const auto n = input.size();
     Vector<T> output(n);
     if (n == 0) return output;
-    const T tau = T{2} * std::numbers::pi_v<T>;
-    const T s = sign<T>(direction);
+    // A direct O(N^2) DFT should be a numerically credible reference path.
+    // For float32, form phase angles, trigonometric roots and accumulated sums
+    // in binary64. Summing 256 unit DC terms in float32 otherwise produced a
+    // spurious ~1.2e-3 out-of-bin result under severe cancellation.
+    // The binary64 code path retains its original precision and semantics.
+    using Work = std::conditional_t<std::same_as<T, float>, double, T>;
+    const Work tau = Work{2} * std::numbers::pi_v<Work>;
+    const Work sg = direction == Direction::forward ? Work{-1} : Work{1};
+    const Work denom = static_cast<Work>(n);
     for (std::size_t k = 0; k < n; ++k) {
-        Complex<T> sum{};
+        std::complex<Work> sum{};
         for (std::size_t t = 0; t < n; ++t) {
-            const T angle = s * tau * static_cast<T>(k) * static_cast<T>(t) / static_cast<T>(n);
-            sum += input[t] * root<T>(angle);
+            const Work angle = sg * tau * static_cast<Work>(k)
+                               * static_cast<Work>(t) / denom;
+            const std::complex<Work> value{
+                static_cast<Work>(input[t].real()),
+                static_cast<Work>(input[t].imag())
+            };
+            sum += value * root<Work>(angle);
         }
-        output[k] = sum;
+        output[k] = {
+            static_cast<T>(sum.real()),
+            static_cast<T>(sum.imag())
+        };
     }
     return output;
 }
