@@ -15,6 +15,8 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <iostream>
 #include <limits>
 #include <numbers>
 #include <random>
@@ -97,11 +99,24 @@ void verify_one_case(L radius, L angle, unsigned pattern) {
     const L tol=std::same_as<T,float> ? 3.e-3L : 2.e-9L;
     for(std::size_t i=0;i<input.size();++i) {
         const T sample=input[i];
-        for(const T result:{
+        const std::array<T,8> results{
             df1.process(sample),df2.process(sample),tdf1.process(sample),
             tdf2.process(sample),bdf1.process(sample),bdf2.process(sample),
-            btdf2.process(sample),cascade.process(sample)}) {
-            close_value(result,ref[i],tol);
+            btdf2.process(sample),cascade.process(sample)};
+        for(std::size_t method=0;method<results.size();++method) {
+            const T result=results[method];
+            const L error=std::abs(static_cast<L>(result)-ref[i]);
+            const L bound=tol*(L{1}+std::abs(ref[i]));
+            if(!std::isfinite(result)||!(error<=bound)) {
+                std::cerr << "IIR_ORACLE_RECURRENCE_FAILURE precision="
+                          << (std::same_as<T,float>?"float32":"float64")
+                          << " radius=" << radius << " angle=" << angle
+                          << " pattern=" << pattern << " sample=" << i
+                          << " method=" << method << " actual=" << result
+                          << " reference=" << ref[i] << " error=" << error
+                          << " bound=" << bound << '\n';
+                std::abort();
+            }
         }
     }
     // Stateful APIs must replay precisely after reset; block processing
@@ -142,7 +157,17 @@ void verify_one_case(L radius, L angle, unsigned pattern) {
                           static_cast<L>(actual.imag())};
         assert(std::isfinite(actual.real())&&std::isfinite(actual.imag()));
         const L limit=std::same_as<T,float> ? 4.e-3L : 3.e-10L;
-        assert(std::abs(observed-expected)<=limit*(1.L+std::abs(expected)));
+        const L error=std::abs(observed-expected);
+        const L bound=limit*(L{1}+std::abs(expected));
+        if(!(error<=bound)) {
+            std::cerr << "IIR_ORACLE_FREQUENCY_FAILURE precision="
+                      << (std::same_as<T,float>?"float32":"float64")
+                      << " radius=" << radius << " angle=" << angle
+                      << " pattern=" << pattern << " frequency=" << frequency
+                      << " actual=" << observed << " expected=" << expected
+                      << " error=" << error << " bound=" << bound << '\n';
+            std::abort();
+        }
     }
 }
 
@@ -182,7 +207,7 @@ void invalid_domains() {
     assert(threw);
     threw=false;
     try { (void)iir::BiquadTransposedDirectFormII<T>(
-        {T{1},T{},T{},T{},T{},T{}}); }
+        iir::BiquadCoefficients<T>{T{1},T{},T{},T{},T{},T{}}); }
     catch(const std::invalid_argument&) {threw=true;}
     assert(threw);
     const design::Zpk<T> unstable{{},{{static_cast<T>(1.01),T{}}},T{1}};

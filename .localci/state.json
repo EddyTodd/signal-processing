@@ -12,7 +12,7 @@
     {
       "id": "sanitizers",
       "status": "PASS_EXPANDED_FINITE_SUITE",
-      "evidence": "9/9 ASan/UBSan CTest executables passed on source 60f0923 with assertions enabled; new IIR test target pending sanitized CI."
+      "evidence": "Previous source 60f0923 passed 9/9 ASan/UBSan CTest. Source d066ee6 failed during Release compilation before sanitizers; new IIR oracle sanitizer gate remains UNVERIFIED."
     },
     {
       "id": "microbenchmark",
@@ -22,7 +22,7 @@
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "Long-double independent FFT oracle and direct-DFT DC analytic cases verified at 60f0923. New IIR separate test uses known complex-conjugate poles, long-double recurrence, rational frequency response, exact first-order impulses, reset, span and invalid-domain cases; pending 10-suite Release+ASan/UBSan run."
+      "evidence": "New IIR reference suite failed at Release compile, not at a numerical assertion: ambiguous brace-list BiquadTransposedDirectFormII<T> test construction on source d066ee6. Explicit BiquadCoefficients<T> fixes the test declaration; per-case IIR numerical mismatch diagnostics added without changing acceptance bounds. Require new pinned CTest Release/ASan/UBSan evidence."
     },
     {
       "id": "website",
@@ -36,13 +36,14 @@
     }
   ],
   "not_verified": [
-    "New signal_processing_iir_oracles CTest target not yet run under either Release or ASan/UBSan (10 suites expected), including known-pole and exact first-order recurrence cases",
-    "IIR stability across broad high-order/near-marginal designs, NaN/Inf/overflow contracts across all DSP APIs, and arbitrary precision global error bounds not certified",
-    "CPU-reported ISA capabilities do not prove instruction selection; no alternative compiler/ISA/platform performance campaign, FFTW/SciPy baseline, memory/throughput or statistical cross-machine replication"
+    "Explicitly typed IIR biquad invalid-domain regression and all new IIR numerical oracles require a fresh Release build and ASan/UBSan run (10 CTests expected); failed d066ee6 did not execute CTest",
+    "New failure diagnostics for IIR recurrence/frequency paths have not been compiled or exercised by Local CI",
+    "IIR stability across high-order/near-marginal designs, exceptional-input behavior and arbitrary precision bounds remain uncertified",
+    "No external FFTW/SciPy, alternative compiler/ISA/platform benchmark, memory/throughput study or independent multi-machine replication"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Execute 10-suite Release and ASan/UBSan on new independent IIR oracle tests; inspect failures and numerical bounds if any, review the next 236-case benchmark artifact, then extend independent spectral/STFT adversarial checks and cross-compiler reference baselines. Do not mark COMPLETE before research limits resolved.",
+  "next": "Verify explicit typed BiquadCoefficients<T> test construction compiles, run 10/10 Release and 10/10 ASan/UBSan CTests; analyze any emitted IIR_ORACLE_RECURRENCE_FAILURE or IIR_ORACLE_FREQUENCY_FAILURE without relaxing tolerances. Then inspect full 236-case dual-precision benchmark and update research limits before further work.",
   "current_verified_ci": {
     "status": "PASS",
     "run_id": "60f092336418-cc8a52e4-85de15eedeb8b224",
@@ -91,5 +92,18 @@
     "tested_sha": "096e02aaa61bf345dc7fc7e50549ddb9afd4711c",
     "tests": "Astro check, npm run test:signal:results 3/3, site build and smoke passed",
     "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42169512038"
+  },
+  "current_failed_ci": {
+    "status": "FAIL",
+    "run_id": "d066ee6d0865-0d022547-ec5d160c55a751b2",
+    "tested_sha": "d066ee6d0865b7043a0b214ad384caa25a236930",
+    "config_sha": "0d0225476dcb1af85a2bf3c6dc730f3a82ae3f94",
+    "stage": "release-numerical-tests",
+    "failure_kind": "compile_error",
+    "diagnostic": "tests/iir_oracles.cpp:184 ambiguous BiquadTransposedDirectFormII<T> brace-list construction; use explicit BiquadCoefficients<T> aggregate",
+    "release_ctest": "not executed; compilation failed",
+    "sanitizer_ctest": "not executed",
+    "benchmark": "not executed",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/d066ee6d0865-0d022547-ec5d160c55a751b2"
   }
 }

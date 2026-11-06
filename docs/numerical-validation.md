@@ -183,3 +183,21 @@ nullability failure was corrected.
 **Next correctness gate:** the 10th new IIR oracle CTest executable has not yet
 run on the laptop. The 9/9 results above validate only the preceding source
 revision. Keep the source task ACTIVE pending new Release/ASan/UBSan evidence.
+
+## IIR oracle compilation blocker (2026-11-06)
+
+Pinned failed run:
+https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/d066ee6d0865-0d022547-ec5d160c55a751b2
+
+Source `d066ee6d0865b7043a0b214ad384caa25a236930` failed at
+`release-numerical-tests` while compiling the newly introduced
+`tests/iir_oracles.cpp`. GCC 13 reported an **ambiguous brace-list
+constructor** for `BiquadTransposedDirectFormII<T>` in the invalid-domain
+test, for both float32 and float64. This is a *test harness compile error*;
+no CTest numerical checks, ASan/UBSan, or timing campaign executed in this
+run. The fix explicitly constructs `BiquadCoefficients<T>` as the argument
+without changing the library or the invalid-`a0` expectation. Added
+specimen/method-specific recurrence and frequency-response failure messages,
+retaining the original tolerances. These fixes remain pending fresh Local CI.
+Previous passing source `60f0923` remains the current verified 9/9 and
+236-case dual-precision evidence.
