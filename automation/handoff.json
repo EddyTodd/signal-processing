@@ -2,7 +2,7 @@
   "schema": 1,
   "state": "READY_TO_CONTINUE",
   "task_id": "signal-processing",
-  "work_sha": "4e098a836c0ffec8bdd245611726c604aa3b7ff1",
-  "responds_to_run_id": "a07e7ec3aba6-37a1862a-95cb756cf5491fcb",
-  "purpose": "Investigate actual float32 mismatch in expanded 24-size multi-seed long-double FFT validation. Run Release tests to capture PRECISION_FAILURE precision/algorithm/length/pattern/seed/phase/index/observed/reference/bound diagnostics. Do not loosen error tolerance without evidence. Fix algorithm or justified test contract in follow-up, re-run Release, ASan/UBSan and benchmark stages. Source remains ACTIVE; previous 9/9 baseline passed only at 5e8707a."
+  "work_sha": "26ad9a9042d88ab2dca9657843861e8cf26b8c8a",
+  "responds_to_run_id": "586e4b52f74d-348e2e17-e28b3d2a64762719",
+  "purpose": "Verify direct DFT float32 cancellation fix against exact independent long-double 24-size multi-seed reference (previous failing case: constant DC N=256 k=224, observed 0.001234 > bound 0.0008), without loosening acceptance. Run Release, ASan/UBSan, 118-case performance microbenchmarks; check any further numerical defects and compare same-machine direct float/double timing after fix. Keep ACTIVE until all new acceptance gates actually pass."
 }
