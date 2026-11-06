@@ -76,6 +76,27 @@ template <fft::Scalar T>
     return scale;
 }
 
+template <signal_processing::detail::Sample Sample>
+void validate_finite_signal(std::span<const Sample> input) {
+    for (const auto& sample : input) {
+        const auto value = signal_processing::detail::to_complex(sample);
+        if (!std::isfinite(value.real()) || !std::isfinite(value.imag()))
+            throw std::invalid_argument("spectral input samples must be finite");
+    }
+}
+
+template <fft::Scalar T>
+void ensure_finite_density(T value) {
+    if (!std::isfinite(value))
+        throw std::overflow_error("spectral power/density exceeded finite scalar range");
+}
+
+template <fft::Scalar T>
+void ensure_finite_density(fft::Complex<T> value) {
+    if (!std::isfinite(value.real()) || !std::isfinite(value.imag()))
+        throw std::overflow_error("spectral complex density exceeded finite scalar range");
+}
+
 [[nodiscard]] inline std::size_t bins(std::size_t n, Sides sides) {
     return sides == Sides::one_sided ? n / 2 + 1 : n;
 }
@@ -94,10 +115,15 @@ template <signal_processing::detail::Sample Sample>
     using Complex = signal_processing::detail::complex_t<Sample>;
     if (input.size() != window.size())
         throw std::invalid_argument("spectral window size must match the input size");
+    validate_finite_signal<Sample>(input);
     std::vector<Complex> time(input.size());
-    for (std::size_t i = 0; i < input.size(); ++i)
+    for (std::size_t i = 0; i < input.size(); ++i) {
         time[i] = signal_processing::detail::to_complex(input[i]) * window[i];
-    return fft::bluestein<Scalar>(time, fft::Direction::forward);
+        ensure_finite_density<Scalar>(time[i]);
+    }
+    auto spectrum = fft::bluestein<Scalar>(time, fft::Direction::forward);
+    for (const auto& bin : spectrum) ensure_finite_density<Scalar>(bin);
+    return spectrum;
 }
 
 template <fft::Scalar T>
@@ -129,6 +155,7 @@ periodogram_bluestein(
     detail::validate_sample_rate<Scalar>(sample_rate);
     if (input.size() != window.size())
         throw std::invalid_argument("spectral window size must match the input size");
+    detail::validate_finite_signal<Sample>(input);
     if (input.empty()) return {};
 
     const Scalar energy = detail::window_energy<Scalar>(window);
@@ -139,6 +166,7 @@ periodogram_bluestein(
     for (std::size_t k = 0; k < count; ++k) output[k] = std::norm(spectrum[k]) * scale;
     if (sides == Sides::one_sided)
         detail::apply_one_sided_density_scaling<Scalar>(output, input.size());
+    for (const auto& density : output) detail::ensure_finite_density<Scalar>(density);
     return output;
 }
 
@@ -158,6 +186,7 @@ template <signal_processing::detail::Sample Sample>
     detail::validate_sample_rate<Scalar>(sample_rate);
     // Short inputs still require a valid analysis window.
     (void)detail::window_energy<Scalar>(window);
+    detail::validate_finite_signal<Sample>(input);
     if (input.size() < window.size()) return {};
 
     const std::size_t frame_count = 1 + (input.size() - window.size()) / hop_size;
@@ -169,7 +198,10 @@ template <signal_processing::detail::Sample Sample>
         for (std::size_t k = 0; k < count; ++k) output[k] += estimate[k];
     }
     const Scalar average = Scalar{1} / static_cast<Scalar>(frame_count);
-    for (auto& value : output) value *= average;
+    for (auto& value : output) {
+        value *= average;
+        detail::ensure_finite_density<Scalar>(value);
+    }
     return output;
 }
 
@@ -190,6 +222,8 @@ cross_spectral_density_bluestein(
     if (hop_size == 0) throw std::invalid_argument("CSD hop size must be nonzero");
     detail::validate_sample_rate<Scalar>(sample_rate);
     const Scalar energy = detail::window_energy<Scalar>(window);
+    detail::validate_finite_signal<Sample>(lhs);
+    detail::validate_finite_signal<Sample>(rhs);
     if (lhs.size() < window.size()) return {};
     const Scalar scale = detail::density_scale<Scalar>(sample_rate, energy);
     const std::size_t frame_count = 1 + (lhs.size() - window.size()) / hop_size;
@@ -207,6 +241,7 @@ cross_spectral_density_bluestein(
     for (auto& value : output) value *= average;
     if (sides == Sides::one_sided)
         detail::apply_one_sided_density_scaling<Scalar>(output, window.size());
+    for (const auto& density : output) detail::ensure_finite_density<Scalar>(density);
     return output;
 }
 
@@ -223,6 +258,7 @@ spectrogram_bluestein(
     detail::validate_sides<Sample>(sides);
     detail::validate_sample_rate<Scalar>(sample_rate);
     const Scalar energy = detail::window_energy<Scalar>(window);
+    detail::validate_finite_signal<Sample>(input);
     const auto transform = stft::bluestein<Sample>(input, window, hop_size, pad_end);
     const std::size_t count = detail::bins(window.size(), sides);
     const Scalar scale = detail::density_scale<Scalar>(sample_rate, energy);
@@ -233,6 +269,7 @@ spectrogram_bluestein(
         for (std::size_t k = 0; k < count; ++k) row[k] = std::norm(frame[k]) * scale;
         if (sides == Sides::one_sided)
             detail::apply_one_sided_density_scaling<Scalar>(row, window.size());
+        for (const auto& density : row) detail::ensure_finite_density<Scalar>(density);
         output.push_back(std::move(row));
     }
     return output;

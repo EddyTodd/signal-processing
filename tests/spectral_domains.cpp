@@ -5,6 +5,7 @@
 #include "signal_processing/spectral.hpp"
 #include <cassert>
 #include <complex>
+#include <cmath>
 #include <limits>
 #include <span>
 #include <stdexcept>
@@ -70,6 +71,60 @@ void verify() {
         short_signal,zeros,2,rate,spectral::Sides::two_sided);});
     must_reject([&]{return spectral::cross_spectral_density_bluestein<Sample>(
         short_signal,short_signal,zeros,2,rate,spectral::Sides::two_sided);});
+    // Invalid source samples must fail even for estimators with an
+    // otherwise valid parameter domain, including short-input returns.
+    for(const T invalid:{nan,inf,-inf}) {
+        for(unsigned component=0;component<
+            (signal_processing::detail::SampleTraits<Sample>::is_complex?2U:1U);
+            ++component) {
+            auto contaminated=signal;
+            if constexpr (signal_processing::detail::SampleTraits<Sample>::is_complex)
+                contaminated[3]=component==0?
+                    Sample{invalid,T{}}:Sample{T{},invalid};
+            else
+                contaminated[3]=invalid;
+            const std::span<const Sample> full(contaminated);
+            const std::span<const Sample> sized(contaminated.data(),window.size());
+            must_reject([&]{return spectral::periodogram_bluestein<Sample>(
+                sized,window,rate,spectral::Sides::two_sided);});
+            must_reject([&]{return spectral::welch_bluestein<Sample>(
+                full,window,2,rate,spectral::Sides::two_sided);});
+            must_reject([&]{return spectral::cross_spectral_density_bluestein<Sample>(
+                full,signal,window,2,rate,spectral::Sides::two_sided);});
+            must_reject([&]{return spectral::cross_spectral_density_bluestein<Sample>(
+                signal,full,window,2,rate,spectral::Sides::two_sided);});
+            must_reject([&]{return spectral::spectrogram_bluestein<Sample>(
+                full,window,2,rate,spectral::Sides::two_sided);});
+            const std::span<const Sample> short_sample(contaminated.data(),4);
+            must_reject([&]{return spectral::welch_bluestein<Sample>(
+                short_sample,window,2,rate,spectral::Sides::two_sided);});
+            must_reject([&]{return spectral::cross_spectral_density_bluestein<Sample>(
+                short_sample,short_sample,window,2,rate,
+                spectral::Sides::two_sided);});
+            must_reject([&]{return spectral::spectrogram_bluestein<Sample>(
+                short_sample,window,2,rate,spectral::Sides::two_sided);});
+        }
+    }
+    // Finite inputs can still overflow in a windowed FFT or squaring
+    // spectrum bins. Every estimator must report that, not emit Inf/NaN.
+    const T big=std::numeric_limits<T>::max()/T{4};
+    const std::vector<Sample> giant(8,Sample{big});
+    const std::span<const Sample> giant_segment(giant.data(),window.size());
+    const auto must_overflow=[](auto&& call) {
+        bool threw=false;
+        try {(void)call();}
+        catch(const std::overflow_error&) {threw=true;}
+        assert(threw);
+    };
+    must_overflow([&]{return spectral::periodogram_bluestein<Sample>(
+        giant_segment,window,rate,spectral::Sides::two_sided);});
+    must_overflow([&]{return spectral::welch_bluestein<Sample>(
+        giant,window,2,rate,spectral::Sides::two_sided);});
+    must_overflow([&]{return spectral::cross_spectral_density_bluestein<Sample>(
+        giant,giant,window,2,rate,spectral::Sides::two_sided);});
+    must_overflow([&]{return spectral::spectrogram_bluestein<Sample>(
+        giant,window,2,rate,spectral::Sides::two_sided);});
+
     // The same undersized input with a finite window remains an empty result.
     assert(spectral::welch_bluestein<Sample>(
         short_signal,window,2,rate,spectral::Sides::two_sided).empty());
