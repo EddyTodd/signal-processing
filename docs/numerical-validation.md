@@ -800,3 +800,65 @@ other DSP APIs, finite-but-inaccurate output, high-order near-unit
 pole conditioning, external FFTW/SciPy baseline and alternative
 compiler/ISA/platform replication, controlled CPU conditions, memory
 throughput and independent machines. Do not mark COMPLETE.
+
+## Two verified 17-suite spectral-input campaigns; pending FIR symmetry repair
+
+Tested source `aaf3a39e506d777103a0da131829048b1cee2c91`, same pinned compiler/benchmarks, two
+independent PASS reports:
+- https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/aaf3a39e506d-0de4ef4b-87cbf3ccee1ac42f
+- https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/aaf3a39e506d-7615bdc1-b4c6f3741e1efba2
+
+The newer coordinator SHA `7615bdc1052efec41939a42294eb90614c7d7f6f` again passed all
+**17/17 Release** and **17/17 ASan/UBSan** CTest executables with
+`-UNDEBUG` assertions active, including spectral real/complex NaN/Inf
+samples, finite-but-overflowing FFT/PSD intermediates, short Welch/CSD
+and spectrogram input-domain guards, and all previous Goertzel/Hilbert,
+STFT, FIR/DCT, IIR, FFT and convolution numerical oracles. Benchmark
+parser self-tests passed. GitHub artifact SHA-256
+`7e9ce4cf86fc0213cf5428e862bab54d1e4ddd309c95ca99cf44186af0d42f60`: **236 measured native-precision benchmarks** (118
+binary32 + 118 binary64) and **2,124 original nine-trial samples**;
+every median, p10, p90, MAD and precision/shape/regime-matched
+baseline speedup was checked against the real samples. Intel i7-13700KF,
+GCC 13.3.0, `-O3 -DNDEBUG -std=c++23 -march=native
+-fno-omit-frame-pointer`, 102 reported available CPU ISA flags
+(which do not establish instructions actually used). All 236 medians
+differ from the prior same-source measurement; this is uncontrolled
+run-to-run timing variability, not evidence of code-level acceleration.
+
+The website feature commit `a0e0c820e924743bb7b7c5be386aa100968c6869` pins the *earlier*
+independently verified `aaf3a39e506d-0de4ef4b-87cbf3ccee1ac42f` source-matched measured artifact
+`89454c45da2af5f52e9f0138878d61794d20c78081abb1fa90a929d993ef0b5e`,
+with accessible charts and tables, and does not blend the runs.
+https://github.com/EddyTodd/eddytodd-web/actions/runs/42240292689
+PASSED Astro checks (zero errors and warnings), three benchmark-data
+provenance tests, complete build, and 23 static plus one proxied route
+smoke.
+
+### Pending overflow-safe linear-phase FIR coefficient classification
+
+In `fir::symmetric_coefficients` and
+`fir::antisymmetric_coefficients`, two finite but near-maximum taps
+could overflow `std::abs(a-b)` or `std::abs(a+b)` **and**
+the original `tolerance*(1+max(abs(a),abs(b)))` bound. Comparing
+`Inf > Inf` incorrectly produced `false`, silently accepting an
+invalid linear-phase tap vector and dispatching a mathematically
+different symmetric/antisymmetric optimized filter.
+
+The new scaled residual computation divides both finite taps by
+`max(1,abs(a),abs(b))` before addition/subtraction, then compares
+their normalized pair mismatch against the original tolerance
+without constructing a potentially overflowing intermediate.
+The independent regression checks max finite opposite/equal/unbalanced
+pairs, negative taps, zero and very large tolerances, tiny subnormal
+values, and rejection by both optimized FIR entry points for real
+binary32/binary64. Earlier finite numerical-error bounds were not
+changed. **This new source has not yet run laptop CI:** the next
+report must confirm **17/17 Release** and **17/17 ASan/UBSan**, the
+parser self-tests and the full 236-case native binary32/binary64
+nine-timing campaign before updating website attribution.
+
+Research limits: remaining API-wide exceptional-value cases,
+near-unit high-order IIR conditioning, global numerical proof,
+external FFTW/SciPy and cross-compiler/ISA/OS benchmarks, CPU
+thermal/cache/frequency controls and multi-machine replication.
+Keep task ACTIVE.

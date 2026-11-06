@@ -6,28 +6,28 @@
   "milestones": [
     {
       "id": "numerical-oracle",
-      "status": "PASS_SEVENTEEN_ANALYTIC_FINITE",
-      "evidence": "Exact PASS 92ca02aed38a-0de4ef4b-f3d9589fbd740635, source 92ca02aed38ac6f1df73ba92ef423aac455caf6b verifies all 17/17 active-assertion Release CTests including Goertzel/Hilbert independent long-double phase and analytic-signal oracles, NaN/Inf input rejection and finite recurrence/analytic output checks, plus numerical FFT/STFT/PSD/DCT/FIR/IIR/convolution suites. New spectral finite-sample/FFT/density overflow guards after this source remain pending."
+      "status": "PASS_SEVENTEEN_SPECTRAL_INPUT_DOMAINS",
+      "evidence": "Two source-matched pinned aaf3a39e506d777103a0da131829048b1cee2c91 PASS reports (aaf3a39e506d-0de4ef4b-87cbf3ccee1ac42f and aaf3a39e506d-7615bdc1-b4c6f3741e1efba2) verify 17/17 assertion-active Release CTests including spectral finite real/complex input, overflowed intermediate/PSD detection, Goertzel/Hilbert exceptional input, DCT/FIR/IIR/FFT/STFT oracles. New FIR extreme finite symmetry overflow regression in source 09429449c62b9a83d2388774cabc429b3850a11b has NOT run."
     },
     {
       "id": "sanitizers",
-      "status": "PASS_SEVENTEEN_ANALYTIC_ASAN_UBSAN",
-      "evidence": "Pinned 92ca02aed38a-0de4ef4b-f3d9589fbd740635: all 17/17 ASan+UBSan CTest executables pass with -UNDEBUG assertions enabled; newly committed spectral.hpp exceptional-sample and density overflow change is not yet sanitizer-tested."
+      "status": "PASS_SEVENTEEN_ASAN_UBSAN",
+      "evidence": "Latest aaf3a39e506d-7615bdc1-b4c6f3741e1efba2 confirms 17/17 ASan and UBSan CTest executables with -UNDEBUG active and parser self-tests PASS. New FIR coefficient symmetry overflow repair not yet verified by laptop on newer source."
     },
     {
       "id": "microbenchmark",
       "status": "PASS_DUAL_PRECISION_MEASURED",
-      "evidence": "Measured 92ca02aed38a-0de4ef4b-f3d9589fbd740635 reports 236 FFT/convolution/DCT/FIR cases, 118 separate native binary32 +118 binary64, nine original samples each (2124), all independently checked positive durations and median/interpolated p10/p90/MAD, speedups against precision/shape/regime matched direct baselines. Artifact 3e6fd4fe9efd373223a486f26fabf362761863ac9e5637e6818c72f9afaeddd8; CPU i7-13700KF, GCC13.3 -O3 -march=native and 102 CPU ISA capability flags, not proof of executed instructions. Single WSL machine, no independent replication."
+      "evidence": "Latest aaf3a39e506d-7615bdc1-b4c6f3741e1efba2: complete source-matched SHA256 7e9ce4cf86fc0213cf5428e862bab54d1e4ddd309c95ca99cf44186af0d42f60, 236 actual native float32/float64 FFT/convolution/DCT/FIR cases (118/precision), 9 positive timing samples per case = 2124, median/p10/p90/MAD and matched precision/shape/regime baseline ratios independently rechecked; CPU i7-13700KF GCC 13.3.0 -O3 -march=native, ISA capability flags 102. Same source/compiler as aaf3a39e506d-0de4ef4b-87cbf3ccee1ac42f yet all 236 medians differ; do not claim method performance improvement or regression."
     },
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "Latest 17/17 Release+ASan/UBSan PASS validates NaN/Inf/overflow Goertzel/Hilbert regression in pinned source. Subsequent correctness audit found spectral periodogram/Welch/CSD/spectrogram could silently process NaN/Inf real/complex samples and produce nonfinite FFT or PSD results from finite values; invalid short inputs could bypass Welch/CSD or spectrogram validation. Added spectral.hpp finite-sample, windowed FFT, density output checks with independent spectral_domains binary32/64 real+complex invalid-input and finite-overflow regression; pending next laptop 17-suite CI."
+      "evidence": "Verified spectral finite-input/FFT/density guards in two separate 17-suite assertion-on Release and sanitizer runs. FIR audit found symmetric_coefficients/antisymmetric_coefficients with opposite or unequal near-max finite taps could overflow both |a +/- b| and (1+max|a|)*tolerance, silently classify invalid linear-phase kernels because Inf > Inf is false. New scaled residual helper avoids public scalar intermediate overflow and retains tolerance semantics, regression added for max/tiny/negative/positive taps and optimized FIR dispatch. Awaiting laptop 17-suite validation."
     },
     {
       "id": "website",
-      "status": "PASS_PINNED_SEVENTEEN_FINITE_ANALYTIC_ARTIFACT",
-      "evidence": "Website feature SHA b0a5e512c04398510d0122a37a7b12acba932b02 pins exact 92ca02aed38a-0de4ef4b-f3d9589fbd740635 measured GitHub artifact SHA256 3e6fd4fe9efd373223a486f26fabf362761863ac9e5637e6818c72f9afaeddd8 (236 native-precision cases, 2124 original timings), accessible charts and table. GitHub Actions 42238308945 SUCCESS: Astro 0 errors/warnings, 3/3 provenance tests, full build and smoke 23 static +1 proxied routes. No website benchmark attribution to untested spectral change."
+      "status": "PASS_PINNED_SEVENTEEN_SPECTRAL_ARTIFACT",
+      "evidence": "Website feature commit a0e0c820e924743bb7b7c5be386aa100968c6869 pins previously independently verified same-source aaf3a39e506d-0de4ef4b-87cbf3ccee1ac42f 17-suite GitHub artifact SHA256 89454c45da2af5f52e9f0138878d61794d20c78081abb1fa90a929d993ef0b5e with 236 native-precision measured rows, 2124 raw samples, accessible charts/tables. GitHub Actions 42240292689 SUCCESS: Astro 0 errors/warnings, provenance 3/3, build and smoke 23 static+1 proxied. Latest aaf3a39e506d-7615bdc1-b4c6f3741e1efba2 independently validated; all 236 medians vary so never mix results or infer speedup."
     },
     {
       "id": "reproducibility",
@@ -36,20 +36,20 @@
     }
   ],
   "not_verified": [
-    "New spectral.hpp explicit real/complex finite sample checks (including short inputs), nonfinite windowed-FFT intermediate rejection and nonfinite PSD/Welch/CSD/spectrogram output rejection, plus expanded signal_processing_spectral_domains adversarial regression, are committed AFTER pinned source 92ca02a; the 17/17 assertion-active Release and 17/17 ASan/UBSan laptop tests have not run for this new source",
-    "Current complete 236-case, 2124-sample benchmark and website provenance pin source 92ca02a only; changes to spectral.hpp not yet benchmarked, parsed, or verified by Local CI",
-    "Exception guards do not certify finite-output numerical accuracy, near-unit/high-order IIR conditioning, full API-wide exceptional values or arbitrary-precision global bounds. Long-double reference format may vary by compiler/platform",
-    "External FFTW/SciPy performance baselines, alternate compiler/ISA/OS, independent multi-machine replication, calibrated thermal/frequency/cache state and memory throughput remain unmeasured"
+    "NEW FIR overflow-safe relative symmetry/antisymmetry checks and high-dynamic-range max/tiny/zero-tolerance regression cases in dct_fir_oracles committed AFTER verified source aaf3a39; they require 17/17 assertion-active Release CTests and 17/17 ASan/UBSan CTests on current branch; pending next laptop run",
+    "Latest 236 measured FFT/convolution/DCT/FIR cases, parser checks and website benchmark apply only to tested source aaf3a39; source 0942944 FIR changes have not run in the local worker and do not yet have source-matched benchmark data",
+    "Finite-output guards and small oracles do not certify numerical accuracy on all finite inputs; full API-wide exceptional-value behavior, high-order near-unit IIR stability, formal global error bounds and platform-dependent long-double reference precision remain unresolved",
+    "External FFTW/SciPy competitive baselines, other OS/ISA/compiler, calibrated CPU thermal/cache/frequency performance, independent-machine replication, memory and throughput evidence remain unmeasured"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Next laptop worker compile new spectral.hpp guards and expanded signal_processing_spectral_domains; verify 17/17 active-assertion Release and 17/17 ASan/UBSan CTests, explicitly NaN/Inf real/complex samples, short Welch/CSD/spectrogram, and finite-but-overflowing FFT/density intermediates. Do not loosen existing numerical tolerances. Publish and check full 236-case native binary32/binary64 9-sample benchmark plus parser self-tests. Keep ACTIVE.",
+  "next": "Next laptop worker compile source FIR relative pair mismatch and extreme finite symmetry regression, run 17/17 Release -UNDEBUG and 17/17 ASan/UBSan CTest and review any DCT_FIR_ORACLE_FAILURE or assertion without loosening tolerance, plus full parser and 236 binary32/binary64 method-shape nine-sample benchmark. Review exact next published report, update website only for verified source-matched artifact; stay ACTIVE.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "92ca02aed38a-0de4ef4b-f3d9589fbd740635",
-    "source_sha": "92ca02aed38ac6f1df73ba92ef423aac455caf6b",
-    "config_sha": "0de4ef4b4209fbbe41c3d27cbf867ad7e78b2818",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/92ca02aed38a-0de4ef4b-f3d9589fbd740635",
+    "run_id": "aaf3a39e506d-7615bdc1-b4c6f3741e1efba2",
+    "source_sha": "aaf3a39e506d777103a0da131829048b1cee2c91",
+    "config_sha": "7615bdc1052efec41939a42294eb90614c7d7f6f",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/aaf3a39e506d-7615bdc1-b4c6f3741e1efba2",
     "release_ctest": 17,
     "asan_ubsan_ctest": 17,
     "assertions_enabled": true,
@@ -63,7 +63,7 @@
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
     "benchmark_source_sha256": "85a3c51d593800ec2c7fc137aeee1bc2f86701c04cf999d66a6bf0fef73a4198",
-    "benchmark_artifact_sha256": "3e6fd4fe9efd373223a486f26fabf362761863ac9e5637e6818c72f9afaeddd8"
+    "benchmark_artifact_sha256": "7e9ce4cf86fc0213cf5428e862bab54d1e4ddd309c95ca99cf44186af0d42f60"
   },
   "previous_failed_ci": {
     "status": "FAIL",
@@ -84,15 +84,15 @@
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
-  "website_commit": "b0a5e512c04398510d0122a37a7b12acba932b02",
+  "website_commit": "a0e0c820e924743bb7b7c5be386aa100968c6869",
   "coordinator_pending_commit": null,
   "website_verification": {
     "status": "PASS",
-    "run_id": 42238308945,
+    "run_id": 42240292689,
     "workflow": "Bouncing Balls verification",
-    "tested_sha": "b0a5e512c04398510d0122a37a7b12acba932b02",
-    "tests": "Astro check 0 errors/0 warnings, benchmark provenance 3/3, full build and smoke 23 static + 1 proxied routes passed",
-    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42238308945"
+    "tested_sha": "a0e0c820e924743bb7b7c5be386aa100968c6869",
+    "tests": "Astro check 0 errors/0 warnings; provenance 3/3; full build; smoke 23 static and 1 proxied routes passed",
+    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42240292689"
   },
   "last_resolved_failed_ci": {
     "status": "FAIL",
@@ -109,10 +109,10 @@
     "resolved_in_verified_run": "6e1862fba245-acfb166f-969900ae365f85eb"
   },
   "last_duplicate_run": {
-    "run_id": "68d5e401e63f-f5c623d8-f9d9c92f52a5f0c4",
-    "source_sha": "68d5e401e63fbdce9392e5f316a1a13144d06668",
+    "run_id": "aaf3a39e506d-0de4ef4b-87cbf3ccee1ac42f",
+    "source_sha": "aaf3a39e506d777103a0da131829048b1cee2c91",
     "benchmark_source_same": true,
     "compiler_flags_same": true,
-    "performance_difference": "All 236 medians differ in the latest d2e69a43 run despite identical benchmark code, compiler flags, and laptop CPU; website pins earlier independently verified 17-suite artifact; no invented aggregation or code-performance claim."
+    "performance_difference": "236/236 medians differ on latest 7615bdc1 run versus earlier 0de4ef4b, despite same source and benchmark kernels/CPU/GCC flags. Website deliberately pins earlier verified artifact; no timing-derived code-level change claim."
   }
 }

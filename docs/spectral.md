@@ -254,8 +254,8 @@ The existing `signal_processing_spectral_domains` CTest now checks
 nonfinite real/imaginary samples and source data that are finite but
 too large for the public binary32/64 Fourier or density
 intermediates, across all four spectral estimators. No old numerical
-bounds were relaxed. This new revision is **not verified by laptop
-CI**: it requires **17/17 Release** and **17/17 ASan/UBSan** with
-assertions enabled, plus a fresh parser-validated 236-case nine-trial
-dual-precision benchmark. Guarding against nonfinite values does
+bounds were relaxed. These spectral-domain regressions subsequently passed all
+**17/17 Release** and **17/17 ASan/UBSan** CTests with active assertions
+in both pinned reports `aaf3a39e506d-0de4ef4b-87cbf3ccee1ac42f` and `aaf3a39e506d-7615bdc1-b4c6f3741e1efba2`; the full
+236-case dual-precision benchmark and parser gates also passed. Guarding against nonfinite values does
 not guarantee small relative error for every finite input.

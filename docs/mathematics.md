@@ -200,6 +200,23 @@ y[n] = \sum_{k=0}^{M-1} b_k x[n-k].
 
 `fir::direct` processes a finite block with zero initial history. `fir::Filter` implements the same recurrence as a stateful circular delay line for streaming use.
 
+### Linear-phase FIR symmetry classification
+
+For a real tap vector of length \(M\), symmetric linear phase requires
+\(h_k=h_{M-1-k}\); antisymmetric linear phase requires
+\(h_k=-h_{M-1-k}\), with a zero center tap when \(M\) is odd.
+With absolute-relative tolerance \(\epsilon\), each pair is compared
+using \(|a\mp b|/(1+\max(|a|,|b|))\leq\epsilon\).
+To avoid overflowing \(|a\mp b|\) or the tolerance-scaled bound
+when both taps are large but finite, divide both taps by
+\(s=\max(1,|a|,|b|)\), then compare
+\(|a/s\mp b/s|/(1/s+\max(|a|,|b|)/s)\) to \(\epsilon\).
+Nonfinite taps are rejected by the classification predicate. This
+preserves the intended normalized comparison even when raw
+differences would overflow, but cannot guarantee a frequency response
+free of floating-point error or arbitrary extreme input overflow.
+
+
 ## IIR filters
 
 For feed-forward coefficients \(b_k\) and feedback coefficients \(a_k\), normalized so \(a_0=1\),
