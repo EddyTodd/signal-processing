@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <span>
+#include <stdexcept>
 #include <vector>
 
 namespace signal_processing::hilbert {
@@ -19,7 +20,11 @@ template <fft::Scalar T>
     if (n == 0) return {};
 
     std::vector<fft::Complex<T>> spectrum(n);
-    for (std::size_t i = 0; i < n; ++i) spectrum[i] = {input[i], T{}};
+    for (std::size_t i = 0; i < n; ++i) {
+        if (!std::isfinite(input[i]))
+            throw std::invalid_argument("Hilbert input samples must be finite");
+        spectrum[i] = {input[i], T{}};
+    }
     spectrum = fft::bluestein<T>(spectrum, fft::Direction::forward);
 
     const std::size_t positive_end = (n + 1) / 2;
@@ -28,7 +33,12 @@ template <fft::Scalar T>
     for (std::size_t k = negative_begin; k < n; ++k) spectrum[k] = {};
     // DC remains unchanged. For even N the Nyquist bin n/2 also remains unchanged.
 
-    return fft::bluestein<T>(spectrum, fft::Direction::inverse);
+    auto output = fft::bluestein<T>(spectrum, fft::Direction::inverse);
+    for (const auto& sample : output) {
+        if (!std::isfinite(sample.real()) || !std::isfinite(sample.imag()))
+            throw std::overflow_error("Hilbert analytic signal exceeded finite scalar range");
+    }
+    return output;
 }
 
 template <fft::Scalar T>

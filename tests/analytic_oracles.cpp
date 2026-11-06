@@ -120,6 +120,40 @@ void check_goertzel() {
     try {(void)signal_processing::goertzel::bin<Sample>(input,input.size());}
     catch(const std::out_of_range&) {threw=true;}
     assert(threw);
+    // Nonfinite real or imaginary input values must not escape from
+    // the real/complex Goertzel API as NaN/Inf coefficients.
+    for (const T bad:{std::numeric_limits<T>::quiet_NaN(),
+                     std::numeric_limits<T>::infinity(),
+                     -std::numeric_limits<T>::infinity()}) {
+        for (unsigned component=0;component<
+             (std::same_as<Sample,T>?1U:2U);++component) {
+            auto corrupted=input;
+            if constexpr (std::same_as<Sample,T>) {
+                corrupted[1]=bad;
+            } else {
+                corrupted[1]=component==0?Sample{bad,T{}}:Sample{T{},bad};
+            }
+            bool input_rejected=false;
+            try {(void)signal_processing::goertzel::frequency<Sample>(
+                     corrupted,T{0.23});}
+            catch(const std::invalid_argument&) {input_rejected=true;}
+            assert(input_rejected);
+            input_rejected=false;
+            try {(void)signal_processing::goertzel::bin<Sample>(
+                     corrupted,1);}
+            catch(const std::invalid_argument&) {input_rejected=true;}
+            assert(input_rejected);
+        }
+    }
+    // A representable input can still blow up the unnormalized
+    // recurrence at zero frequency. Reject instead of returning Inf.
+    const T huge=std::numeric_limits<T>::max()/T{2};
+    const std::vector<Sample> huge_input(4,Sample{huge});
+    bool overflow_rejected=false;
+    try {(void)signal_processing::goertzel::frequency<Sample>(
+             huge_input,T{});}
+    catch(const std::overflow_error&) {overflow_rejected=true;}
+    assert(overflow_rejected);
 }
 
 template <typename T>
@@ -176,6 +210,24 @@ void check_hilbert() {
                       "real_reconstruction",n,Wide{},i);
             }
         }
+    for (const T bad:{std::numeric_limits<T>::quiet_NaN(),
+                     std::numeric_limits<T>::infinity(),
+                     -std::numeric_limits<T>::infinity()}) {
+        auto invalid=make_input<T>(7,0);
+        invalid[3]=bad;
+        bool rejected=false;
+        try {(void)signal_processing::hilbert::analytic_bluestein<T>(invalid);}
+        catch(const std::invalid_argument&) {rejected=true;}
+        assert(rejected);
+        rejected=false;
+        try {(void)signal_processing::hilbert::transform_bluestein<T>(invalid);}
+        catch(const std::invalid_argument&) {rejected=true;}
+        assert(rejected);
+        rejected=false;
+        try {(void)signal_processing::hilbert::envelope_bluestein<T>(invalid);}
+        catch(const std::invalid_argument&) {rejected=true;}
+        assert(rejected);
+    }
 }
 }
 int main() {

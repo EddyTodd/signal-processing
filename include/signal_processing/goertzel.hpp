@@ -30,8 +30,12 @@ template <signal_processing::detail::Sample Sample>
     Complex previous{};
     Complex previous2{};
     for (const auto& sample : input) {
-        const Complex current = signal_processing::detail::to_complex(sample) +
-                                coefficient * previous - previous2;
+        const Complex value = signal_processing::detail::to_complex(sample);
+        if (!std::isfinite(value.real()) || !std::isfinite(value.imag()))
+            throw std::invalid_argument("Goertzel input samples must be finite");
+        const Complex current = value + coefficient * previous - previous2;
+        if (!std::isfinite(current.real()) || !std::isfinite(current.imag()))
+            throw std::overflow_error("Goertzel recurrence exceeded finite scalar range");
         previous2 = previous;
         previous = current;
     }
@@ -43,7 +47,10 @@ template <signal_processing::detail::Sample Sample>
     const Complex rotate_last{std::cos(last_phase), std::sin(last_phase)};
     const Scalar after_phase = last_phase - omega;
     const Complex rotate_after{std::cos(after_phase), std::sin(after_phase)};
-    return rotate_last * previous - rotate_after * previous2;
+    const Complex result = rotate_last * previous - rotate_after * previous2;
+    if (!std::isfinite(result.real()) || !std::isfinite(result.imag()))
+        throw std::overflow_error("Goertzel result exceeded finite scalar range");
+    return result;
 }
 
 template <signal_processing::detail::Sample Sample>
