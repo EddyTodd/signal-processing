@@ -2,7 +2,7 @@
   "schema": 1,
   "state": "READY_TO_CONTINUE",
   "task_id": "signal-processing",
-  "work_sha": "1965f20e7e45e05fb1e07cc72fce362569e24f8d",
-  "responds_to_run_id": "5e8707acd4b8-358bd155-9b69a8ab6020425d",
-  "purpose": "Verify expanded 24-size multi-seed float32/float64 independent long-double forward/inverse FFT numerical suite. Previous exact 9/9 Release and 9/9 ASan/UBSan CTests plus 118 measured benchmark cases all PASS. Review exact next CI report and iteratively strengthen independent IIR/spectral and cross-compiler or third-party performance evidence without claiming world-leading performance prematurely."
+  "work_sha": "4e098a836c0ffec8bdd245611726c604aa3b7ff1",
+  "responds_to_run_id": "a07e7ec3aba6-37a1862a-95cb756cf5491fcb",
+  "purpose": "Investigate actual float32 mismatch in expanded 24-size multi-seed long-double FFT validation. Run Release tests to capture PRECISION_FAILURE precision/algorithm/length/pattern/seed/phase/index/observed/reference/bound diagnostics. Do not loosen error tolerance without evidence. Fix algorithm or justified test contract in follow-up, re-run Release, ASan/UBSan and benchmark stages. Source remains ACTIVE; previous 9/9 baseline passed only at 5e8707a."
 }
