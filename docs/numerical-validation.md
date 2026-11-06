@@ -354,3 +354,67 @@ run **13/13 Release** and **13/13 ASan/UBSan** CTest executables,
 then the full measured binary32/binary64 benchmark campaign.
 No global mathematical guarantee, external performance baseline,
 or all-input exceptional-value contract is claimed.
+
+## Verified 13-suite normalized correlation and convolution campaign
+
+The latest independently pinned `51c9e29045ce-91530d70-58022aa4ada6e37e` for source
+`51c9e29045ce5891b77e0dc7dc1f9454a03095a0`, coordinator
+`91530d7083be5ce2dd819f40295518494fbd1063`, finished
+2026-11-06 06:45 UTC:
+https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/51c9e29045ce-91530d70-58022aa4ada6e37e
+
+All **13/13 Release** CTest executables passed with assertions active,
+including the new `signal_processing_convolution_oracles` suite with
+direct textbook `long double` convolution, real/complex binary32/binary64
+circular/linear convolution, FFT implementations, overlap-add/save,
+partitioned streaming and reset/flush, normalized correlation and weak-tail
+regression. All **13/13 ASan/UBSan** CTest executables also passed;
+the external benchmark parser self-tests passed.
+
+The measured artifact has **236 cases** across FFT, convolution, DCT-II
+and FIR (118 each for natively compiled binary32 and binary64), **nine
+positive samples per case = 2,124 raw samples**, empirical median/p10/p90/MAD
+and matched-regime speedups. CPU: 13th Gen Intel Core i7-13700KF,
+compiler: GCC 13.3.0; flags `-O3 -DNDEBUG -std=c++23 -march=native
+-fno-omit-frame-pointer`, 102 reported available CPU ISA flags (not a
+disassembly/actual instruction-use audit). Published artifact SHA-256:
+`df1caaa0e403a4890f96062560c0f7b29de6996241e42a781cef381e236c8d9b`.
+Every case's nine-sample median, interpolated p10/p90, MAD, iteration
+count, and matched baseline ratio was rechecked against the GitHub artifact.
+No anomalous statistics or unmatched precision/regime speedup found.
+The earlier `51c9e29045ce-e1d417be-ee89ec682ae2af39` has the same source, compiler flags, benchmark
+code, machine and 13-suite PASS status but **all 236 median timings differ**.
+Variation is not evidence of faster/slower algorithm changes.
+
+The public website's feature commit
+`95937f6a55c45453b2795b7e7e95537a99838fa5` pins the
+earlier verified 13-suite artifact, not merged or invented timing data.
+GitHub Actions
+https://github.com/EddyTodd/eddytodd-web/actions/runs/42176097144
+passed Astro checks, 3/3 benchmark provenance tests, full build,
+and static/proxied route smoke tests. The newer same-source run is a
+separate independent measurement, not an update of the displayed data.
+
+## Pending finite IIR coefficient guard and fourth-order SOS oracle
+
+IIR scalar normalization and first-order/biquad/SOS constructors
+previously accepted `NaN`, `Inf`, or nonzero but sufficiently tiny
+denominators whose quotient overflowed during normalization, silently
+feeding invalid coefficients into stateful recursive filters. New
+construction checks reject non-finite original or normalized
+coefficients with `std::invalid_argument`, including nonfinite SOS
+gain, while retaining legitimate tiny finite denominators when all
+normalized ratios remain finite. This does **not** constrain sample
+inputs or claim every finite filter is BIBO-stable.
+
+New `signal_processing_iir_domains` checks invalid domains across
+four direct/transposed realizations, first-order and three biquads,
+and SOS constructors. A separately constructed fourth-order
+two-section cascade is checked against long-double textbook recurrences
+for impulse, step and oscillatory inputs, radius 0.76 and 0.985,
+including reset and manually chained realizations. It extends,
+rather than weakens, the previous IIR tests. **Not yet tested in
+Local CI:** next report must show **14/14 Release and 14/14 ASan/UBSan**
+with enabled assertions plus a new 236-case campaign. Neither
+independent multi-machine performance evidence nor global
+floating-point accuracy is established.

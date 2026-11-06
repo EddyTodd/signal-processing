@@ -170,6 +170,7 @@ These conversions deliberately reject a result whose imaginary residue is too la
 
 - IIR scalar APIs support binary32 and binary64 only.
 - `a[0]` is normalized once at construction; a zero leading denominator coefficient is invalid.
+- General-form, first-order and biquad constructors reject non-finite initial coefficients and non-finite quotients after normalization; SOS cascades also reject non-finite global gain. Nonzero negative or tiny finite `a[0]` remains valid when all quotients are finite. These checks do not prove stability and do not guard arbitrary runtime sample inputs.
 - Analog prototype functions return finite zeros only; relative degree represents zeros at infinity.
 - Digital critical frequencies are normalized to Nyquist, not sample rate.
 - No filter family, realization, normalization, or SOS/transfer representation is chosen automatically.
