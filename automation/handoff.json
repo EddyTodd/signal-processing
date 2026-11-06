@@ -2,7 +2,7 @@
   "schema": 1,
   "state": "READY_TO_CONTINUE",
   "task_id": "signal-processing",
-  "work_sha": "6785c8ad7f14d8a5bf9b2eccca0b8ed20ab50169",
+  "work_sha": "2e4de617857f9c405d15dd822f11c0f78e905cbf",
   "responds_to_run_id": "19047b0782bf-32ac4220-d21dde9956499eed",
-  "purpose": "Expanded 24-size float32/float64 precision suite and 9/9 Release plus 9/9 ASan/UBSan CTests passed on 19047b0 after direct float32 DFT cancellation fix. 118 single-machine GCC 13.3.0 binary64 benchmark cases measured. Continue research-grade independent IIR/spectral adversarial oracles, same-regime performance comparisons and website artifact updates; cross-compiler, float32 and third-party baselines remain unverified. Keep ACTIVE and do not merge main."
+  "purpose": "Latest pinned source 19047b0 passed 9/9 Release, 9/9 ASan/UBSan and 118 binary64 benchmark cases. Source now adds stricter analytic float32/float64 direct DFT DC regression (N=128/256/257) and verified history/timing comparison; coordinator AI branch cc8a52e adds separately compiled float32 and float64 FFT/convolution/DCT/FIR benchmark campaigns plus ISA availability metadata. Website branch b5a64e uses only actual pinned 19047b0 binary64 artifacts. Next local run must verify new test, sanitizer and parser suites, collect both precision timings with 9 repetitions each, check false speedups, assess artifacts before any new website claims. Remain ACTIVE; do not mark COMPLETE or merge main."
 }
