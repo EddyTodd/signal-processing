@@ -64,6 +64,11 @@ if(SIGNAL_PROCESSING_BUILD_TESTS)
     add_test(NAME signal_processing_spectral_oracles
              COMMAND signal_processing_spectral_oracles)
 
+    add_executable(signal_processing_iir_domains tests/iir_domains.cpp)
+    signal_processing_configure_test(signal_processing_iir_domains)
+    add_test(NAME signal_processing_iir_domains
+             COMMAND signal_processing_iir_domains)
+
     add_executable(signal_processing_convolution_oracles tests/convolution_oracles.cpp)
     signal_processing_configure_test(signal_processing_convolution_oracles)
     add_test(NAME signal_processing_convolution_oracles
