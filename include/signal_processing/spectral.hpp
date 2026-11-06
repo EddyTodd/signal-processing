@@ -40,16 +40,40 @@ namespace detail {
 
 template <signal_processing::detail::Sample Sample>
 void validate_sides(Sides sides) {
+    if (sides != Sides::two_sided && sides != Sides::one_sided)
+        throw std::invalid_argument("unknown spectral density sides value");
     if (sides == Sides::one_sided && signal_processing::detail::SampleTraits<Sample>::is_complex)
         throw std::invalid_argument("one-sided spectral density is defined here only for real input");
 }
 
 template <fft::Scalar T>
+void validate_sample_rate(T sample_rate) {
+    if (!(sample_rate > T{}) || !std::isfinite(sample_rate))
+        throw std::invalid_argument("sample rate must be finite and positive");
+}
+
+template <fft::Scalar T>
 [[nodiscard]] T window_energy(std::span<const T> window) {
     T energy{};
-    for (const T value : window) energy += value * value;
-    if (!(energy > T{})) throw std::invalid_argument("spectral window must have positive energy");
+    for (const T value : window) {
+        if (!std::isfinite(value))
+            throw std::invalid_argument("spectral window coefficients must be finite");
+        energy += value * value;
+    }
+    if (!(energy > T{}) || !std::isfinite(energy))
+        throw std::invalid_argument("spectral window energy must be finite and positive");
     return energy;
+}
+
+template <fft::Scalar T>
+[[nodiscard]] T density_scale(T sample_rate, T energy) {
+    const T denominator = sample_rate * energy;
+    if (!(denominator > T{}) || !std::isfinite(denominator))
+        throw std::invalid_argument("spectral density normalization product must be finite");
+    const T scale = T{1} / denominator;
+    if (!(scale > T{}) || !std::isfinite(scale))
+        throw std::invalid_argument("spectral density scale must be finite and positive");
+    return scale;
 }
 
 [[nodiscard]] inline std::size_t bins(std::size_t n, Sides sides) {
@@ -102,13 +126,15 @@ periodogram_bluestein(
     Sides sides = Sides::two_sided) {
     using Scalar = signal_processing::detail::scalar_t<Sample>;
     detail::validate_sides<Sample>(sides);
-    if (!(sample_rate > Scalar{})) throw std::invalid_argument("sample rate must be positive");
+    detail::validate_sample_rate<Scalar>(sample_rate);
+    if (input.size() != window.size())
+        throw std::invalid_argument("spectral window size must match the input size");
     if (input.empty()) return {};
 
     const Scalar energy = detail::window_energy<Scalar>(window);
     const auto spectrum = detail::windowed_fft<Sample>(input, window);
     const std::size_t count = detail::bins(input.size(), sides);
-    const Scalar scale = Scalar{1} / (sample_rate * energy);
+    const Scalar scale = detail::density_scale<Scalar>(sample_rate, energy);
     std::vector<Scalar> output(count);
     for (std::size_t k = 0; k < count; ++k) output[k] = std::norm(spectrum[k]) * scale;
     if (sides == Sides::one_sided)
@@ -129,7 +155,9 @@ template <signal_processing::detail::Sample Sample>
     detail::validate_sides<Sample>(sides);
     if (window.empty()) throw std::invalid_argument("Welch window must be nonempty");
     if (hop_size == 0) throw std::invalid_argument("Welch hop size must be nonzero");
-    if (!(sample_rate > Scalar{})) throw std::invalid_argument("sample rate must be positive");
+    detail::validate_sample_rate<Scalar>(sample_rate);
+    // Short inputs still require a valid analysis window.
+    (void)detail::window_energy<Scalar>(window);
     if (input.size() < window.size()) return {};
 
     const std::size_t frame_count = 1 + (input.size() - window.size()) / hop_size;
@@ -160,11 +188,10 @@ cross_spectral_density_bluestein(
         throw std::invalid_argument("cross-spectral inputs must have equal length");
     if (window.empty()) throw std::invalid_argument("CSD window must be nonempty");
     if (hop_size == 0) throw std::invalid_argument("CSD hop size must be nonzero");
-    if (!(sample_rate > Scalar{})) throw std::invalid_argument("sample rate must be positive");
-    if (lhs.size() < window.size()) return {};
-
+    detail::validate_sample_rate<Scalar>(sample_rate);
     const Scalar energy = detail::window_energy<Scalar>(window);
-    const Scalar scale = Scalar{1} / (sample_rate * energy);
+    if (lhs.size() < window.size()) return {};
+    const Scalar scale = detail::density_scale<Scalar>(sample_rate, energy);
     const std::size_t frame_count = 1 + (lhs.size() - window.size()) / hop_size;
     const std::size_t count = detail::bins(window.size(), sides);
     std::vector<Complex> output(count, Complex{});
@@ -194,11 +221,11 @@ spectrogram_bluestein(
     bool pad_end = false) {
     using Scalar = signal_processing::detail::scalar_t<Sample>;
     detail::validate_sides<Sample>(sides);
-    if (!(sample_rate > Scalar{})) throw std::invalid_argument("sample rate must be positive");
+    detail::validate_sample_rate<Scalar>(sample_rate);
     const Scalar energy = detail::window_energy<Scalar>(window);
     const auto transform = stft::bluestein<Sample>(input, window, hop_size, pad_end);
     const std::size_t count = detail::bins(window.size(), sides);
-    const Scalar scale = Scalar{1} / (sample_rate * energy);
+    const Scalar scale = detail::density_scale<Scalar>(sample_rate, energy);
     std::vector<std::vector<Scalar>> output;
     output.reserve(transform.frames.size());
     for (const auto& frame : transform.frames) {
