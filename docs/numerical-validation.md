@@ -744,3 +744,59 @@ no full API-wide exceptional-value certification or high-order IIR
 conditioning guarantee. External FFTW/SciPy comparisons, alternate
 compilers/ISA/platforms, controlled thermal/frequency/caches and
 independent multi-machine performance remain outstanding.
+
+## Verified finite analytic-contract campaign; pending spectral-data validation
+
+The exact pinned CI run `92ca02aed38a-0de4ef4b-f3d9589fbd740635` for source
+`92ca02aed38ac6f1df73ba92ef423aac455caf6b` and coordinator `0de4ef4b4209fbbe41c3d27cbf867ad7e78b2818` passed all
+**17/17 Release** and **17/17 ASan/UBSan** CTest executables
+with assertions explicitly active (`-UNDEBUG`), including independent
+Goertzel/Hilbert long-double phase and analytic checks plus nonfinite
+real/complex sample rejection and overflowing recurrence/analytic-result
+checks. All four stages, including benchmark parser self-tests, passed:
+https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/92ca02aed38a-0de4ef4b-f3d9589fbd740635
+
+The GitHub benchmark artifact SHA-256 `3e6fd4fe9efd373223a486f26fabf362761863ac9e5637e6818c72f9afaeddd8` contains
+**236 real FFT/convolution/DCT/FIR method-shape benchmarks** (118
+binary32 and 118 binary64), **2,124 actual timings** (nine per case).
+Every reported median, p10/p90, MAD, and matched
+precision/shape/allocation-regime baseline ratio was independently
+checked against published raw samples. CPU: Intel i7-13700KF, GCC 13.3.0,
+`-O3 -DNDEBUG -std=c++23 -march=native -fno-omit-frame-pointer`.
+102 ISA capabilities were reported; executed ISA was not audited.
+Observed spread is empirical and does not establish an algorithmic
+speedup or cross-platform confidence interval.
+
+The eddytodd-web feature commit
+`b0a5e512c04398510d0122a37a7b12acba932b02` displays exactly
+that source-matched artifact. GitHub Actions
+https://github.com/EddyTodd/eddytodd-web/actions/runs/42238308945
+passed Astro (zero errors and warnings), all three benchmark-data
+provenance tests, full build and 23 static + one proxied route smoke.
+
+### Pending finite-spectral-sample and density-output integrity
+
+Audit of the public periodogram, Welch, CSD and spectrogram estimators
+found that they validated rates/windows but not real or complex sample
+values. NaN/Inf inputs could become NaN/Inf FFT coefficients and
+densities, while large **finite** inputs could overflow complex
+multiplications, FFT bins, powers or one-sided PSD doubling. Malformed
+samples in short Welch/CSD inputs could even be ignored on the early
+empty-result path.
+
+New guards validate every real/imaginary input sample, including short
+or otherwise zero-frame input, check finite windowed FFT intermediates,
+and reject nonfinite PSD/Welch/CSD/spectrogram outputs. The independently
+expanded `signal_processing_spectral_domains` CTest checks those
+contracts for native binary32/binary64 real/complex data, including
+finite values too large for normalized Fourier or density arithmetic.
+The new tests do not loosen prior numeric tolerances. **Not yet run
+in Local CI**: next report must confirm **17/17 Release and 17/17
+ASan/UBSan** with assertions enabled plus the complete 236-case
+nine-sample-per-case native-precision benchmark and parser self-tests.
+
+Remaining research limits: exceptional-value coverage throughout all
+other DSP APIs, finite-but-inaccurate output, high-order near-unit
+pole conditioning, external FFTW/SciPy baseline and alternative
+compiler/ISA/platform replication, controlled CPU conditions, memory
+throughput and independent machines. Do not mark COMPLETE.

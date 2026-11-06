@@ -231,7 +231,31 @@ expected complex analytic samples. The assertions cover real-part
 reconstruction, imaginary Hilbert transform, magnitude envelope, short,
 odd/even and empty sequences for native binary32 and binary64.
 
-This is **new, unverified source code**: it must compile and pass a
-**17/17 Release and 17/17 ASan/UBSan** laptop CTest campaign with
-assertions active, alongside the complete measured benchmark/parser gate.
-No precision-specific tolerances from prior tests have been increased.
+The independent Goertzel/Hilbert phase and analytic-signal oracles,
+including extended finite-input and overflow checks, passed **17/17
+Release** and **17/17 ASan/UBSan** executables with assertions active
+in source-matched run `92ca02aed38a-0de4ef4b-f3d9589fbd740635`, together with benchmark parser
+self-tests and the complete measured dual-precision benchmark. These
+finite cases are not a global numerical guarantee.
+
+## Pending nonfinite spectral data and finite-overflow checks
+
+After the latest verified baseline, the spectral PSD estimators received
+explicit NaN/Inf validation for real and complex **input samples**,
+including invalid samples in short-input cases that otherwise return
+an empty Welch/CSD/spectrogram. Windowed FFT inputs and resulting
+spectrum bins are checked for finite real/imaginary components.
+Periodogram, Welch PSD, cross-spectral density and spectrogram density
+outputs reject nonfinite powers, cumulative density sums or one-sided
+doubling overflow with `std::overflow_error`. Invalid samples raise
+`std::invalid_argument`.
+
+The existing `signal_processing_spectral_domains` CTest now checks
+nonfinite real/imaginary samples and source data that are finite but
+too large for the public binary32/64 Fourier or density
+intermediates, across all four spectral estimators. No old numerical
+bounds were relaxed. This new revision is **not verified by laptop
+CI**: it requires **17/17 Release** and **17/17 ASan/UBSan** with
+assertions enabled, plus a fresh parser-validated 236-case nine-trial
+dual-precision benchmark. Guarding against nonfinite values does
+not guarantee small relative error for every finite input.

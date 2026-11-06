@@ -178,6 +178,8 @@ finite input; underflow and cancellation are still possible.
 
 Independent `long double` textbook DFT Goertzel/Hilbert tests passed
 **17/17 Release and 17/17 ASan/UBSan** in
-`68d5e401e63f-f5c623d8-f9d9c92f52a5f0c4` and `68d5e401e63f-d2e69a43-72b81618b891aad9`. **The newly added exceptional-input
-and overflowing-intermediate guards are unverified by laptop CI**,
-so the next source-matched 17-suite run is mandatory.
+`68d5e401e63f-f5c623d8-f9d9c92f52a5f0c4` and `68d5e401e63f-d2e69a43-72b81618b891aad9`. The exceptional-input and overflowing-intermediate
+guards subsequently passed the **17/17 active-assertion Release and
+17/17 ASan/UBSan** checks in `92ca02aed38a-0de4ef4b-f3d9589fbd740635`, alongside the complete measured
+dual-precision benchmark and parser self-tests. No general
+floating-point accuracy guarantee is claimed.

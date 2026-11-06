@@ -6,28 +6,28 @@
   "milestones": [
     {
       "id": "numerical-oracle",
-      "status": "PASS_SEVENTEEN_ANALYTIC",
-      "evidence": "Both pinned same-source reports 68d5e401e63f-f5c623d8-f9d9c92f52a5f0c4 and 68d5e401e63f-d2e69a43-72b81618b891aad9 passed 17/17 active-assertion Release CTests including independent long-double Goertzel off-bin and DFT phase, Hilbert analytic and envelope odd/even/short tests, and preceding FFT/IIR/STFT/spectral/DCT/FIR/convolution oracles. Newly committed Goertzel/Hilbert finite-input/overflow guard regression has NOT been run."
+      "status": "PASS_SEVENTEEN_ANALYTIC_FINITE",
+      "evidence": "Exact PASS 92ca02aed38a-0de4ef4b-f3d9589fbd740635, source 92ca02aed38ac6f1df73ba92ef423aac455caf6b verifies all 17/17 active-assertion Release CTests including Goertzel/Hilbert independent long-double phase and analytic-signal oracles, NaN/Inf input rejection and finite recurrence/analytic output checks, plus numerical FFT/STFT/PSD/DCT/FIR/IIR/convolution suites. New spectral finite-sample/FFT/density overflow guards after this source remain pending."
     },
     {
       "id": "sanitizers",
-      "status": "PASS_SEVENTEEN_ASAN_UBSAN",
-      "evidence": "Second pinned 68d5e401e63f-d2e69a43-72b81618b891aad9 confirms 17/17 ASan/UBSan CTests with -UNDEBUG assertions; newly committed Goertzel/Hilbert exceptional-value changes after verified source require new 17-suite laptop CI."
+      "status": "PASS_SEVENTEEN_ANALYTIC_ASAN_UBSAN",
+      "evidence": "Pinned 92ca02aed38a-0de4ef4b-f3d9589fbd740635: all 17/17 ASan+UBSan CTest executables pass with -UNDEBUG assertions enabled; newly committed spectral.hpp exceptional-sample and density overflow change is not yet sanitizer-tested."
     },
     {
       "id": "microbenchmark",
       "status": "PASS_DUAL_PRECISION_MEASURED",
-      "evidence": "Second pinned 68d5e401e63f-d2e69a43-72b81618b891aad9 contains 236 genuine FFT/convolution/DCT/FIR cases (118 native float32 plus 118 float64), 2124 real raw timing samples (nine each), empirical medians/p10/p90/MAD and matched-precision/shape/regime speedups independently audited; artifact SHA256 fc70a02845dfc9b6427ebfda4014f7e555d7d103e5576a1b548eec6fe35989cc, CPU i7-13700KF GCC13.3 -O3 -march=native with 102 available ISA flags. Earlier 68d5e401e63f-f5c623d8-f9d9c92f52a5f0c4 same kernels/compiler/CPU, 236/236 different medians. No algorithm speedup inference."
+      "evidence": "Measured 92ca02aed38a-0de4ef4b-f3d9589fbd740635 reports 236 FFT/convolution/DCT/FIR cases, 118 separate native binary32 +118 binary64, nine original samples each (2124), all independently checked positive durations and median/interpolated p10/p90/MAD, speedups against precision/shape/regime matched direct baselines. Artifact 3e6fd4fe9efd373223a486f26fabf362761863ac9e5637e6818c72f9afaeddd8; CPU i7-13700KF, GCC13.3 -O3 -march=native and 102 CPU ISA capability flags, not proof of executed instructions. Single WSL machine, no independent replication."
     },
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "Two complete 17-suite passes verify new long-double mathematical Goertzel and Hilbert oracles. New source fixes Goertzel's acceptance of nonfinite complex/real samples and nonfinite recurrence/answer from huge finite values; Hilbert analytic API rejects nonfinite real samples/final complex output. Adversarial regression added to existing analytic_oracles (no tolerance change); awaiting a fresh laptop 17-suite and sanitizer run. Other exceptional values and near-unit IIR numerical guarantees remain open."
+      "evidence": "Latest 17/17 Release+ASan/UBSan PASS validates NaN/Inf/overflow Goertzel/Hilbert regression in pinned source. Subsequent correctness audit found spectral periodogram/Welch/CSD/spectrogram could silently process NaN/Inf real/complex samples and produce nonfinite FFT or PSD results from finite values; invalid short inputs could bypass Welch/CSD or spectrogram validation. Added spectral.hpp finite-sample, windowed FFT, density output checks with independent spectral_domains binary32/64 real+complex invalid-input and finite-overflow regression; pending next laptop 17-suite CI."
     },
     {
       "id": "website",
-      "status": "PASS_PINNED_SEVENTEEN_SUITE_ARTIFACT",
-      "evidence": "Verified website feature SHA 525486f2954cea65f881ebe5e4c68e00c3f59762 displays the prior 68d5e401e63f-f5c623d8-f9d9c92f52a5f0c4 exact 17-suite source-matched measured artifact af716476c494388f9a6a7add2de4028b35d773bb7de987fc6680811aedad091e with 236 measured cases/2124 raw timing samples, not merged with newer same-source 68d5e401e63f-d2e69a43-72b81618b891aad9. GitHub Actions 42236331082 passed Astro 0 errors/warnings, 3/3 provenance, site build and smoke 23 static +1 proxied routes."
+      "status": "PASS_PINNED_SEVENTEEN_FINITE_ANALYTIC_ARTIFACT",
+      "evidence": "Website feature SHA b0a5e512c04398510d0122a37a7b12acba932b02 pins exact 92ca02aed38a-0de4ef4b-f3d9589fbd740635 measured GitHub artifact SHA256 3e6fd4fe9efd373223a486f26fabf362761863ac9e5637e6818c72f9afaeddd8 (236 native-precision cases, 2124 original timings), accessible charts and table. GitHub Actions 42238308945 SUCCESS: Astro 0 errors/warnings, 3/3 provenance tests, full build and smoke 23 static +1 proxied routes. No website benchmark attribution to untested spectral change."
     },
     {
       "id": "reproducibility",
@@ -36,20 +36,20 @@
     }
   ],
   "not_verified": [
-    "NEW Goertzel real/complex float32/64 nonfinite input and nonfinite recurrence/output overflow guards plus Hilbert real float32/64 finite input/final analytic sample guards and adversarial analytic_oracles regressions committed after verified source 68d5e40; 17/17 Release -UNDEBUG and 17/17 ASan/UBSan laptop CI not yet run for current source",
-    "Current measured benchmark artifact and website provenance are for source 68d5e40 only; new source with Goertzel/Hilbert exceptional-value guards has not been microbenchmarked, parsed or sanctioned by Local CI",
-    "Floating-point result finiteness does not imply accurate finite coefficients; intermediate FFT/power underflow/overflow, high-order near-unit IIR, complete API-wide exceptional-input contracts and global error/stability bounds remain open",
-    "External FFTW/SciPy and competitors, alternate compiler/platform/ISA, thermal/frequency/cache control, memory/throughput and independent multi-machine replication remain unmeasured"
+    "New spectral.hpp explicit real/complex finite sample checks (including short inputs), nonfinite windowed-FFT intermediate rejection and nonfinite PSD/Welch/CSD/spectrogram output rejection, plus expanded signal_processing_spectral_domains adversarial regression, are committed AFTER pinned source 92ca02a; the 17/17 assertion-active Release and 17/17 ASan/UBSan laptop tests have not run for this new source",
+    "Current complete 236-case, 2124-sample benchmark and website provenance pin source 92ca02a only; changes to spectral.hpp not yet benchmarked, parsed, or verified by Local CI",
+    "Exception guards do not certify finite-output numerical accuracy, near-unit/high-order IIR conditioning, full API-wide exceptional values or arbitrary-precision global bounds. Long-double reference format may vary by compiler/platform",
+    "External FFTW/SciPy performance baselines, alternate compiler/ISA/OS, independent multi-machine replication, calibrated thermal/frequency/cache state and memory throughput remain unmeasured"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Next laptop CI must compile current Goertzel/Hilbert checks and execute 17/17 assertion-active Release and 17/17 ASan/UBSan CTests, particularly new real/imaginary NaN/Inf and huge finite input overflow regressions; inspect any failures without increasing old tolerances. Require parser self-tests and full 236-case binary32+binary64 9-sample benchmark and source-SHA-matched report before publishing updated website measurements. Maintain ACTIVE.",
+  "next": "Next laptop worker compile new spectral.hpp guards and expanded signal_processing_spectral_domains; verify 17/17 active-assertion Release and 17/17 ASan/UBSan CTests, explicitly NaN/Inf real/complex samples, short Welch/CSD/spectrogram, and finite-but-overflowing FFT/density intermediates. Do not loosen existing numerical tolerances. Publish and check full 236-case native binary32/binary64 9-sample benchmark plus parser self-tests. Keep ACTIVE.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "68d5e401e63f-d2e69a43-72b81618b891aad9",
-    "source_sha": "68d5e401e63fbdce9392e5f316a1a13144d06668",
-    "config_sha": "d2e69a4341c2034acf1d10f5afe03aa0c4d71ed2",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/68d5e401e63f-d2e69a43-72b81618b891aad9",
+    "run_id": "92ca02aed38a-0de4ef4b-f3d9589fbd740635",
+    "source_sha": "92ca02aed38ac6f1df73ba92ef423aac455caf6b",
+    "config_sha": "0de4ef4b4209fbbe41c3d27cbf867ad7e78b2818",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/92ca02aed38a-0de4ef4b-f3d9589fbd740635",
     "release_ctest": 17,
     "asan_ubsan_ctest": 17,
     "assertions_enabled": true,
@@ -63,7 +63,7 @@
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
     "benchmark_source_sha256": "85a3c51d593800ec2c7fc137aeee1bc2f86701c04cf999d66a6bf0fef73a4198",
-    "benchmark_artifact_sha256": "fc70a02845dfc9b6427ebfda4014f7e555d7d103e5576a1b548eec6fe35989cc"
+    "benchmark_artifact_sha256": "3e6fd4fe9efd373223a486f26fabf362761863ac9e5637e6818c72f9afaeddd8"
   },
   "previous_failed_ci": {
     "status": "FAIL",
@@ -84,15 +84,15 @@
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
-  "website_commit": "525486f2954cea65f881ebe5e4c68e00c3f59762",
+  "website_commit": "b0a5e512c04398510d0122a37a7b12acba932b02",
   "coordinator_pending_commit": null,
   "website_verification": {
     "status": "PASS",
-    "run_id": 42236331082,
+    "run_id": 42238308945,
     "workflow": "Bouncing Balls verification",
-    "tested_sha": "525486f2954cea65f881ebe5e4c68e00c3f59762",
-    "tests": "Astro 0 errors and warnings; provenance tests 3/3; full build and 23 static plus 1 proxied route smoke passed",
-    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42236331082"
+    "tested_sha": "b0a5e512c04398510d0122a37a7b12acba932b02",
+    "tests": "Astro check 0 errors/0 warnings, benchmark provenance 3/3, full build and smoke 23 static + 1 proxied routes passed",
+    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42238308945"
   },
   "last_resolved_failed_ci": {
     "status": "FAIL",
