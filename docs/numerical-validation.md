@@ -134,7 +134,52 @@ and binary64 IIR realizations against a direct textbook difference-equation
 reference accumulated in `long double`. Its known conjugate poles span
 radii 0.05–0.985 and distinct angular positions. Deterministic impulse, step,
 alternating and seeded random stimuli test eight realization paths, reset and
-block/scalar equivalence, plus span-length exceptions. A separate complex
+block/scalar equivalence, plus span-length exceptions. Exact first-order
+impulse-response formulas for positive/negative real poles and non-unit
+leading denominator coefficients are checked independently. A separate complex
 rational response oracle checks DC, Nyquist, interior frequencies, and known
 stability-domain boundaries. These tests are **not yet verified** by Local CI;
 no formal stability or conditioning guarantee is implied for all parameters.
+
+## Verified 236-case dual-precision local campaign (2026-11-06)
+
+Local CI source/handoff `60f0923364188f9cfb728c40676c1adf6015e063`
+and coordinator `cc8a52e49ba0c06578c2ec698c0bc605fa40a1c5`:
+https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/60f092336418-cc8a52e4-85de15eedeb8b224
+
+- **9/9 Release** tests and **9/9 AddressSanitizer/UndefinedBehaviorSanitizer**
+  tests passed with assertions explicitly enabled, including the strict
+  N=128/256/257 analytic float32/float64 cancellation regression.
+- **236 distinct method/shape/precision cases:** 118 separately compiled
+  binary32, 118 binary64. Nine repeated steady-clock timing samples per case
+  (2,124 raw samples). The published artifact SHA-256 is
+  `e5eee46e34bdbb085bef75c79c759c5c8ac62b8b3d7c6365bcf71e0911d5b5f9`.
+- Intel i7-13700KF, GCC 13.3.0, `-O3 -DNDEBUG -std=c++23 -march=native`,
+  one benchmark thread; availability of CPU ISA flags is recorded, but
+  instruction selection was not independently inspected.
+- Illustrative **measured rows** from the published artifact for N=256,
+  end-to-end allocating DFT (ns per call, median with empirical p10–p90):
+
+| Precision | Method | Median ns | p10–p90 ns |
+|---|---|---:|---:|
+| binary32 | direct DFT | 726838.44 | 713907.51–746311.83 |
+| binary32 | radix-2 | 5195.98 | 5135.20–5407.87 |
+| binary32 | Bluestein | 40107.52 | 39399.67–42167.84 |
+| binary64 | direct DFT | 689812.00 | 686099.49–735952.29 |
+| binary64 | radix-2 | 5157.75 | 5095.11–5199.23 |
+| binary64 | Bluestein | 42334.65 | 41752.45–42979.69 |
+
+Do **not** read this table as a universal benchmark or conclude a speedup
+between precisions. Measured comparisons must match precision, shape and
+execution regime. CPU frequency/thermal state, inter-run noise, alternate
+compilers, platforms and external reference libraries remain uncontrolled.
+The website `feature/signal-processing-lab-20261105` commit
+`096e02aaa61bf345dc7fc7e50549ddb9afd4711c` displays the entire
+verified artifact with a precision selector and within-precision ratios.
+Its GitHub workflow `42169512038` passed Astro type checking, the
+three measured-data tests, the site build and smoke checks after a prior
+nullability failure was corrected.
+
+**Next correctness gate:** the 10th new IIR oracle CTest executable has not yet
+run on the laptop. The 9/9 results above validate only the preceding source
+revision. Keep the source task ACTIVE pending new Release/ASan/UBSan evidence.

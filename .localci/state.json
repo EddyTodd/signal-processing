@@ -22,12 +22,12 @@
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "FFT cancellation fixed and verified with independent long-double and analytic DC tests. New separate known-pole IIR analytical long-double and rational frequency-response oracles on float32/64 are unverified until next Release/ASan-UBSan CI; exceptional NaN/Inf behavior across whole DSP API, high-order conditioning and platform breadth remain."
+      "evidence": "Long-double independent FFT oracle and direct-DFT DC analytic cases verified at 60f0923. New IIR separate test uses known complex-conjugate poles, long-double recurrence, rational frequency response, exact first-order impulses, reset, span and invalid-domain cases; pending 10-suite Release+ASan/UBSan run."
     },
     {
       "id": "website",
-      "status": "UPDATED_DUAL_PRECISION_PENDING_SITE_BUILD",
-      "evidence": "Feature branch 0352b0fc82c637723aec7a82bd592209681c2d14 shows reviewed 236-case GitHub microbenchmark artifact, 2124 samples, with precision selector and precision-safe comparisons. Site build/test verification of new website commit pending."
+      "status": "PASS_VERIFIED_DUAL_PRECISION",
+      "evidence": "Website feature commit 096e02aaa61bf345dc7fc7e50549ddb9afd4711c publishes 236 verified binary32/binary64 benchmark rows (2124 samples), accessible precision-filtered chart/table and provenance. GitHub Actions verification run 42169512038 passed Astro check, 3 measured-artifact tests, build and smoke."
     },
     {
       "id": "reproducibility",
@@ -36,14 +36,13 @@
     }
   ],
   "not_verified": [
-    "New signal_processing_iir_oracles CTest target not yet run in Release or ASan/UBSan; no broad IIR stability or pole-conditioning certification",
-    "Full website build/test for feature commit 0352b0fc82c637723aec7a82bd592209681c2d14 not yet independently verified",
-    "No separate proof of C++ compiler instructions from CPU ISA capabilities; no FFTW/SciPy third-party, cross-compiler/platform/ISA benchmark or memory/throughput study",
-    "Finite and structured numerical oracles cannot certify all NaN/Inf propagation, arbitrary-precision error or all DSP API contracts"
+    "New signal_processing_iir_oracles CTest target not yet run under either Release or ASan/UBSan (10 suites expected), including known-pole and exact first-order recurrence cases",
+    "IIR stability across broad high-order/near-marginal designs, NaN/Inf/overflow contracts across all DSP APIs, and arbitrary precision global error bounds not certified",
+    "CPU-reported ISA capabilities do not prove instruction selection; no alternative compiler/ISA/platform performance campaign, FFTW/SciPy baseline, memory/throughput or statistical cross-machine replication"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Run new independent IIR oracle CTest target (expect 10 Release and 10 ASan/UBSan suites), inspect numeric diagnostics and repair actual faults. Review dual-precision website build on feature branch; then extend spectral/STFT reconstruction and adversarial behavior. No COMPLETE pending remaining research gates.",
+  "next": "Execute 10-suite Release and ASan/UBSan on new independent IIR oracle tests; inspect failures and numerical bounds if any, review the next 236-case benchmark artifact, then extend independent spectral/STFT adversarial checks and cross-compiler reference baselines. Do not mark COMPLETE before research limits resolved.",
   "current_verified_ci": {
     "status": "PASS",
     "run_id": "60f092336418-cc8a52e4-85de15eedeb8b224",
@@ -83,6 +82,14 @@
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
-  "website_commit": "0352b0fc82c637723aec7a82bd592209681c2d14",
-  "coordinator_pending_commit": null
+  "website_commit": "096e02aaa61bf345dc7fc7e50549ddb9afd4711c",
+  "coordinator_pending_commit": null,
+  "website_verification": {
+    "status": "PASS",
+    "run_id": 42169512038,
+    "workflow": "Bouncing Balls verification",
+    "tested_sha": "096e02aaa61bf345dc7fc7e50549ddb9afd4711c",
+    "tests": "Astro check, npm run test:signal:results 3/3, site build and smoke passed",
+    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42169512038"
+  }
 }
