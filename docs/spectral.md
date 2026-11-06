@@ -169,3 +169,22 @@ to frames with start offset strictly inside the input; it does not change
 ordinary overlapping STFT behavior. This fix and the new tests are *not yet
 measured or verified*. A future report must independently confirm the
 11-executable Release and ASan/UBSan gates and the published benchmark suite.
+
+## Spectral API exceptional-input contract
+
+All four public Bluestein periodogram, Welch, CSD and spectrogram
+density estimators require a **finite positive sampling rate**,
+a supported `Sides` value and a window with finite coefficients
+and strictly positive, finite energy. The public-format product
+`sample_rate * window_energy` and reciprocal density scale must
+remain positive and finite; invalid cases throw
+`std::invalid_argument` rather than silently returning zero/Inf
+density. A two-sided empty periodogram returns an empty vector only
+when its window is also empty. Short Welch/CSD signals continue to
+return empty results, but cannot suppress window validation.
+
+These guards apply to estimator parameters, not arbitrary sample
+amplitudes, which can still overflow spectral FFT or power products.
+The corresponding independent `signal_processing_spectral_domains`
+CTest covers both float formats and real/complex samples and is
+**pending 15-suite Release and ASan/UBSan laptop verification**.

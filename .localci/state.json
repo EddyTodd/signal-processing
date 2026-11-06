@@ -6,28 +6,28 @@
   "milestones": [
     {
       "id": "numerical-oracle",
-      "status": "PASS_FOURTEEN_FINITE_SUITE_ZPK",
-      "evidence": "Pinned e53a2cefa111-1873d453-c0686d8e9a32d4cc passed 14/14 Release CTests with active C asserts, including finite-ZPK/strict-real SOS coefficient checks, independent long-double DCT I-IV, FIR, convolution, IIR fourth-order, FFT and STFT/PSD/Welch/CSD oracles. New extreme finite correlation amplitude regression has not been run."
+      "status": "PASS_14_EXTREME_CORRELATION",
+      "evidence": "Pinned d07d6db4f24c-1873d453-0b30aba5b2261519 confirms 14/14 Release CTests with -UNDEBUG asserts, including the extreme small/large finite normalized cross-correlation direct/FFT regression on float32/64 real and complex, independent long-double DCT/FIR/FFT/IIR/STFT and spectral oracles. New spectral parameter-domain executable is pending 15th-suite CI."
     },
     {
       "id": "sanitizers",
-      "status": "PASS_FOURTEEN_ASAN_UBSAN_ZPK",
-      "evidence": "Pinned e53a2cefa111-1873d453-c0686d8e9a32d4cc: 14/14 ASan/UBSan CTest passes and -UNDEBUG assertions enabled, alongside parsed complete local benchmark campaign. Extreme normalized correlation changes added after verified commit and require a new 14-suite run."
+      "status": "PASS_14_EXTREME_CORRELATION",
+      "evidence": "Pinned d07d6db4f24c-1873d453-0b30aba5b2261519 confirms 14/14 ASan/UBSan CTests with assertions enabled and all benchmark/parser stages. New spectral parameter validation and spectral_domains target have not run on laptop; expect 15/15 both configurations."
     },
     {
       "id": "microbenchmark",
       "status": "PASS_DUAL_PRECISION_MEASURED",
-      "evidence": "Measured e53a2cefa111-1873d453-c0686d8e9a32d4cc exact GitHub artifact SHA256 821f05b6d6eae4ee273bb4f607f57ec30062e58d1ba2ba1e73b86c1a47a8f9b1 contains 236 native binary32/binary64 FFT/convolution/DCT/FIR cases, 118 per precision, nine positive timing samples each (2,124 total), validated medians/interpolated p10/p90/MAD and matched method/regime speedups, CPU Intel i7-13700KF, GCC13.3, compiler flags and 102 ISA availability flags. Single-machine empirical variability only."
+      "evidence": "Pinned d07d6db4f24c-1873d453-0b30aba5b2261519 publishes 236 native binary32/binary64 FFT/convolution/DCT/FIR measured variants, 118 per precision, 9 raw timing samples each (2124), with recomputed median/p10/p90/MAD and matched precision/shape/regime speedups. Artifact SHA256 f87d3953a81b0e42c472e704b5faaa6416cad0f59cc899ab9fb2b28a4fb8fce2, GCC13.3 -O3 -march=native, i7-13700KF, 102 ISA capability flags (not per-kernel executed-instruction proof); machine conditions uncontrolled."
     },
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "Source e53a2cefa111b1848b76a67050541ff2c1c56e14 validates finite direct ZPK roots and gain, analog evaluation frequencies, realness of SOS coefficients, and rejects NaN/Inf and nonconjugate root projection; passed 14/14 active-assertion Release/ASan/UBSan. Next audit found finite high/low amplitude correlation can overflow or underflow the raw float/double correlation numerator despite a finite normalized answer. New scalar-range-aware extended-precision direct-lag fallback and float32/float64 real/complex adversarial regression committed but not locally executed."
+      "evidence": "Verified dynamic-range normalized correlation fixes passed 14 Release and 14 ASan/UBSan suites. New correctness audit found periodogram empty-input shape mismatch, nonfinite sample_rate, nonfinite/overflowed window energy and normalization silently yielding zero/Inf, invalid sides enum and short-input Welch/CSD early returns bypassing invalid window checks. Guards added in spectral.hpp, separate independent spectral_domains test with 4 native public sample types; code pending next 15-suite laptop CI."
     },
     {
       "id": "website",
-      "status": "PASS_FOURTEEN_ZPK_ARTIFACT",
-      "evidence": "Feature commit 9eede12911dfaa2592991144b642992c3d935c5c pins measured e53a2cefa111-1873d453-c0686d8e9a32d4cc, exact published SHA256 821f05b6d6eae4ee273bb4f607f57ec30062e58d1ba2ba1e73b86c1a47a8f9b1, 236 precision-selectable method/shape cases, 2,124 raw timing samples, accessible charts/tables. Workflow 42223987117 PASS: Astro 0 errors/warnings, 3/3 benchmark data provenance tests, full build and 23-static+1-proxied smoke. No web benchmark attribution for newer untested correlation code."
+      "status": "PASS_PINNED_14_CORRELATION_MEASUREMENTS",
+      "evidence": "Website feature commit 5b46e70a47664e4cbb0e452ef7f60ab2c1f5f266 pins exact measured source d07d6db4f24cd4c111bc466c39c17457dc74c6b4 run d07d6db4f24c-1873d453-0b30aba5b2261519 artifact SHA256 f87d3953a81b0e42c472e704b5faaa6416cad0f59cc899ab9fb2b28a4fb8fce2 (236 precision-separated cases, 2124 actual timings). Workflow 42225998150 SUCCESS: Astro 0 errors/warnings, benchmark provenance 3/3, full static build and smoke 23 static + 1 proxied routes; no data attributed to newer spectral code."
     },
     {
       "id": "reproducibility",
@@ -36,20 +36,20 @@
     }
   ],
   "not_verified": [
-    "Post-verified source 796c2e3 fixes underflow/overflow in finite high/low amplitude normalized correlation and extends independent oracle to real/complex float32 and float64: must pass 14/14 Release and 14/14 ASan/UBSan CTests and assertion-on gates in next laptop CI",
-    "New source correlation changes have no published benchmark/parser campaign; run 236 method/shape cases (118 per precision, nine raw samples each), and keep website attribution pinned exclusively to verified source e53a2ce",
-    "Long-double range and precision vary by platform (may equal double); extreme amplitude guarantees require cross-platform testing; arbitrary high-order/near-unit IIR conditioning, NaN/Inf survey across all DSP APIs and formal global error/stability proof remain unverified",
-    "External FFTW/SciPy and other DSP baselines, cross-compiler/ISA/platform, controlled CPU thermal/frequency behavior, memory/throughput and independent multi-machine measurement remain unverified"
+    "New spectral.hpp finite-positive sampling rate, checked spectral sides and finite-positive normalization/energy contracts plus dedicated spectral_domains CTest are committed after verified source d07d6db; next laptop run must PASS 15/15 Release and 15/15 ASan/UBSan with C assertions active",
+    "New spectral source has NOT been benchmarked by laptop; next run must verify 236 binary32/binary64 cases (118 each, 9 timing samples per case) and parser tests before website evidence can advance to current branch",
+    "Pathological finite signals can still overflow intermediate FFT/power results; long-double dynamic range varies by platform; no formal global precision or high-order near-unit IIR stability guarantee",
+    "External FFTW/SciPy benchmarks, cross-platform/compiler/ISA evidence, independent machine replication, thermal and cache control and memory/throughput benchmarking remain unmeasured"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Next laptop Local CI run must compile updated normalized correlation, run all 14 Release and 14 ASan/UBSan CTests with assertions enabled, specifically extreme amplitude normalized correlation for float32/64 real/complex; verify 236-case native binary32/64 nine-sample timings and parser, examine exact new report. Current website stays pinned to verified ZPK/SOS run. Keep ACTIVE.",
+  "next": "Next laptop Local CI must compile spectral_domains (15th CTest), run 15/15 Release with -UNDEBUG and 15/15 ASan/UBSan, verify all new NaN/Inf/overflowed rate/window/sides/short-input assertions without weakening existing oracle bounds, then publish and inspect 236 precision-separated nine-sample benchmark cases plus parser self-tests. Only update website using measured GitHub artifact. Keep ACTIVE.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "e53a2cefa111-1873d453-c0686d8e9a32d4cc",
-    "source_sha": "e53a2cefa111b1848b76a67050541ff2c1c56e14",
+    "run_id": "d07d6db4f24c-1873d453-0b30aba5b2261519",
+    "source_sha": "d07d6db4f24cd4c111bc466c39c17457dc74c6b4",
     "config_sha": "1873d453ccf98ce9e38582ea70b25c303c25b9da",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/e53a2cefa111-1873d453-c0686d8e9a32d4cc",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/d07d6db4f24c-1873d453-0b30aba5b2261519",
     "release_ctest": 14,
     "asan_ubsan_ctest": 14,
     "assertions_enabled": true,
@@ -63,7 +63,7 @@
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
     "benchmark_source_sha256": "85a3c51d593800ec2c7fc137aeee1bc2f86701c04cf999d66a6bf0fef73a4198",
-    "benchmark_artifact_sha256": "821f05b6d6eae4ee273bb4f607f57ec30062e58d1ba2ba1e73b86c1a47a8f9b1"
+    "benchmark_artifact_sha256": "f87d3953a81b0e42c472e704b5faaa6416cad0f59cc899ab9fb2b28a4fb8fce2"
   },
   "previous_failed_ci": {
     "status": "FAIL",
@@ -84,15 +84,15 @@
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
-  "website_commit": "9eede12911dfaa2592991144b642992c3d935c5c",
+  "website_commit": "5b46e70a47664e4cbb0e452ef7f60ab2c1f5f266",
   "coordinator_pending_commit": null,
   "website_verification": {
     "status": "PASS",
-    "run_id": 42223987117,
+    "run_id": 42225998150,
     "workflow": "Bouncing Balls verification",
-    "tested_sha": "9eede12911dfaa2592991144b642992c3d935c5c",
-    "tests": "Astro check 0 errors and 0 warnings, benchmark provenance tests 3/3, build and 23-static + 1-proxied smoke passed",
-    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42223987117"
+    "tested_sha": "5b46e70a47664e4cbb0e452ef7f60ab2c1f5f266",
+    "tests": "Astro check 0 errors and 0 warnings; 3/3 benchmark provenance tests; full build; smoke 23 static plus 1 proxied route passed",
+    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42225998150"
   },
   "last_resolved_failed_ci": {
     "status": "FAIL",

@@ -529,3 +529,57 @@ on the laptop**; the next gate must verify all **14/14 Release and
 14/14 ASan/UBSan CTests**, then a fresh benchmark/parser campaign.
 The range of `long double` differs by platform; this is not a
 portable guarantee that all double extremes normalize accurately.
+
+## Verified extreme-range normalized correlation and next spectral domain gate
+
+Pinned report `d07d6db4f24c-1873d453-0b30aba5b2261519` for source `d07d6db4f24cd4c111bc466c39c17457dc74c6b4` and coordinator
+`1873d453ccf98ce9e38582ea70b25c303c25b9da` passed all stages:
+https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/d07d6db4f24c-1873d453-0b30aba5b2261519
+
+**14/14 Release** and **14/14 ASan/UBSan** CTest executables passed with
+`-UNDEBUG` assertions enabled, including direct and FFT normalized
+correlation of very small/large real/complex binary32 and binary64 values,
+plus independent long-double mathematical oracles and all earlier
+IIR/ZPK, DCT, FIR, FFT, convolution and STFT/spectral suites. The
+benchmark parser self-tests passed. Benchmark artifact SHA-256:
+`f87d3953a81b0e42c472e704b5faaa6416cad0f59cc899ab9fb2b28a4fb8fce2`: **236 measured cases** (118 float32, 118 float64), **2,124
+actual raw timing samples** (nine per case), independent checks of
+median/p10/p90/MAD and matched speedup ratios. CPU i7-13700KF and
+GCC 13.3.0, flags `-O3 -DNDEBUG -std=c++23 -march=native
+-fno-omit-frame-pointer`; available ISA flags recorded, instruction use
+unproven. Timings are noisy empirical observations, not confidence
+intervals or cross-machine performance claims.
+
+Website feature commit `5b46e70a47664e4cbb0e452ef7f60ab2c1f5f266`
+pins only this exact measured artifact and its test provenance. GitHub
+Actions run https://github.com/EddyTodd/eddytodd-web/actions/runs/42225998150
+passed Astro checks (0 errors and warnings), all three benchmark
+provenance tests, full build and 23-static/1-proxied route smoke.
+
+### Pending checked spectral parameter/normalization contracts
+
+Audit found that the previous PSD implementations accepted `+Inf`
+sample rate because it satisfied the positive-only comparison, and
+could silently output zeros when `sample_rate * window_energy`
+overflowed. Non-finite window entries could also produce non-finite
+spectral density. An invalid `Sides` enumerator was treated like
+two-sided, while a mismatched window on an empty periodogram or a
+malformed window on a too-short Welch/CSD signal could bypass validation.
+
+The new `spectral.hpp` guards require finite, positive sample rates,
+supported side values, finite window coefficients and positive finite
+window energy. The normalization product and reciprocal scale must
+both be finite and strictly positive in the public binary32/64
+format; otherwise they explicitly throw `std::invalid_argument`
+rather than return silently corrupted density. Empty matching
+periodogram inputs continue to return empty; a shape mismatch
+throws, and short Welch/CSD still return empty *after* validating
+window energy. New `signal_processing_spectral_domains` tests four
+real/complex sample types, invalid domain and normalization extremes
+and early-return boundaries. **This new code and 15th CTest target
+are not yet validated on the laptop:** the next report must show
+**15/15 Release** and **15/15 ASan/UBSan** with assertions active,
+the benchmark/parser campaign and source-SHA-matched artifact.
+Finite input/output guardrails do not prove all intermediate FFT
+products remain representable; no full numerical stability or
+third-party competitiveness is claimed.
