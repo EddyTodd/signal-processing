@@ -166,7 +166,7 @@ The analog prototype is then transformed to low-pass, high-pass, band-pass, or b
 
 These conversions deliberately reject a result whose imaginary residue is too large to be explained by binary32/binary64 roundoff. A malformed or non-conjugate root set therefore does not silently become a real filter.
 
-Caller-supplied ZPK roots and gain must have finite real/imaginary coordinates. Conversion rejects non-finite expanded coefficients or section sums/products; SOS also checks the imaginary residue of each proposed real quadratic, rather than merely testing approximate root-pair distance. Non-finite analog response frequency is rejected. These ZPK/SOS checks are pending independent laptop CI at the next source revision.
+Caller-supplied ZPK roots and gain must have finite real/imaginary coordinates. Conversion rejects non-finite expanded coefficients or section sums/products; SOS also checks the imaginary residue of each proposed real quadratic, rather than merely testing approximate root-pair distance. Non-finite analog response frequency is rejected. The ZPK/SOS checks were verified by 14/14 Release and 14/14 ASan/UBSan CTests in the pinned run `e53a2cefa111-1873d453-c0686d8e9a32d4cc`; this finite regression evidence is not a proof for arbitrary root sets.
 
 ## Numerical conventions
 

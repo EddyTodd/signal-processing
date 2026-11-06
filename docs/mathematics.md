@@ -170,7 +170,7 @@ For every lag, normalized cross-correlation divides by the energies of the sampl
        \left(\sum_{n\in I_\ell}|y[n-\ell]|^2\right)}}.
 \]
 
-`normalized_direct` uses the direct numerator; `normalized_fft` uses the FFT numerator. Both compute the overlap energies with prefix sums. If either overlapping segment has zero energy, the normalized value is defined as zero. This is an energy-normalized correlation coefficient, not the separate biased/unbiased lag-count normalization used by some statistical autocorrelation conventions.
+`normalized_direct` initially uses the direct numerator; `normalized_fft` initially uses the FFT numerator. Both calculate overlap energies with pairwise **long-double range-sum trees** instead of cancellation-prone prefix differences, in \(O(\log N)\) per lag. For weak FFT overlaps, or when the raw scalar-format numerator underflows or overflows despite a representable normalized coefficient, the affected lag numerator is recomputed directly in extended precision. This fallback costs \(O(L)\) for an affected overlap of length \(L\); typical well-scaled finite inputs retain the original kernel path. If either overlapping segment has zero energy, the normalized value is defined as zero. Extended-range behavior is not a cross-platform guarantee because the range of C++ `long double` varies by toolchain. This is an energy-normalized correlation coefficient, not the separate biased/unbiased lag-count normalization used by some statistical autocorrelation conventions.
 
 ## Discrete cosine transforms
 

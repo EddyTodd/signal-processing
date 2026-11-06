@@ -476,3 +476,56 @@ This change is **not yet validated by laptop CI**: repeat all
 **14/14 Release and 14/14 ASan/UBSan** executables and the full
 precision-separated benchmark campaign. No full-space numerical
 proof or external competitive performance comparison is claimed.
+
+## Verified ZPK/SOS integrity, independent extreme-amplitude correlation regression pending
+
+Pinned report `e53a2cefa111-1873d453-c0686d8e9a32d4cc` (tested source
+`e53a2cefa111b1848b76a67050541ff2c1c56e14`, workflow `1873d453ccf98ce9e38582ea70b25c303c25b9da`) is
+https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/e53a2cefa111-1873d453-c0686d8e9a32d4cc.
+All **14/14 Release** and **14/14 ASan/UBSan** CTests passed
+with assertions active, including real-coefficient ZPK/SOS conjugate
+integrity checks, non-finite ZPK roots/gains and analog frequencies,
+fourth-order IIR recurrence, and all earlier independent transform,
+spectral, filtering and convolution oracles. Benchmark-parser self-tests
+passed.
+
+Pinned benchmark SHA-256
+`821f05b6d6eae4ee273bb4f607f57ec30062e58d1ba2ba1e73b86c1a47a8f9b1` contains **236 measured cases**
+(118 separately compiled binary32 and 118 binary64), **2,124 actual
+timed samples** (nine per method/shape/precision), correct medians,
+interpolated p10/p90, MAD, and strictly same-precision, shape and regime
+relative timing ratios. CPU Intel Core i7-13700KF, compiler GCC 13.3.0,
+flags `-O3 -DNDEBUG -std=c++23 -march=native -fno-omit-frame-pointer`,
+102 CPU ISA *available* flags (not proven executed ISA). CPU frequency,
+cache, thermal state, external competitor, compiler portability and
+multi-machine uncertainty are not controlled.
+
+Website feature commit
+`9eede12911dfaa2592991144b642992c3d935c5c`
+ingests **exactly that measured artifact** with precision-selectable
+accessible charts/tables, and GitHub workflow
+https://github.com/EddyTodd/eddytodd-web/actions/runs/42223987117
+passed Astro checks with zero errors/warnings, all three data-provenance
+tests, complete build and 23 static plus one proxied route smoke tests.
+
+### Pending normalized correlation dynamic-range repair
+
+A separate audit found that normalizing only after forming the raw
+cross-correlation in binary32/64 can give **incorrect zero or infinity**
+when finite input amplitudes are too small/large for their product but
+the normalized result is finite (e.g. self-correlation of a tiny
+nonzero signal must be one at zero lag). The existing long-double
+overlap-energy tree and FFT cancellation-sensitive fallback do not
+automatically repair the **direct** path's intermediate underflow.
+The new change recomputes an affected lag's numerator directly in long
+double whenever the raw scalar result is non-finite or the
+long-double normalization denominator lies outside the public scalar's
+normal representable range. Independent textbook long-double oracles
+now test extreme finite amplitudes for real and complex float32/float64,
+including conjugation and far-lag single-tap overlaps. The test bounds
+remain unchanged for earlier cases; the new adversarial cases have
+explicit independent expected values. **This change is not yet tested
+on the laptop**; the next gate must verify all **14/14 Release and
+14/14 ASan/UBSan CTests**, then a fresh benchmark/parser campaign.
+The range of `long double` differs by platform; this is not a
+portable guarantee that all double extremes normalize accurately.

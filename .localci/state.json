@@ -6,28 +6,28 @@
   "milestones": [
     {
       "id": "numerical-oracle",
-      "status": "PASS_FOURTEEN_FINITE_SUITE",
-      "evidence": "Run a8db0cbbb78f-1873d453-6ae773968c56a254 pinned source a8db0cbbb78fcef4cdba30457abc54696a44b9f7 and coordinator 1873d453ccf98ce9e38582ea70b25c303c25b9da; 14/14 Release CTests with active asserts, including finite IIR coefficient/normalization overflow checks and independent fourth-order long-double SOS oracle, plus long-double FFT, DCT, FIR, convolution, STFT, IIR recurrence oracles. New ZPK/SOS conversion input checks after a8db0cbbb78fcef4cdba30457abc54696a44b9f7 are untested."
+      "status": "PASS_FOURTEEN_FINITE_SUITE_ZPK",
+      "evidence": "Pinned e53a2cefa111-1873d453-c0686d8e9a32d4cc passed 14/14 Release CTests with active C asserts, including finite-ZPK/strict-real SOS coefficient checks, independent long-double DCT I-IV, FIR, convolution, IIR fourth-order, FFT and STFT/PSD/Welch/CSD oracles. New extreme finite correlation amplitude regression has not been run."
     },
     {
       "id": "sanitizers",
-      "status": "PASS_FOURTEEN_SUITE_ASAN_UBSAN",
-      "evidence": "Run a8db0cbbb78f-1873d453-6ae773968c56a254: 14/14 ASan and UBSan CTest executable passes with -UNDEBUG assertions enabled. New ZPK validation and malformed-conjugate tests added after verified commit require another 14-suite run."
+      "status": "PASS_FOURTEEN_ASAN_UBSAN_ZPK",
+      "evidence": "Pinned e53a2cefa111-1873d453-c0686d8e9a32d4cc: 14/14 ASan/UBSan CTest passes and -UNDEBUG assertions enabled, alongside parsed complete local benchmark campaign. Extreme normalized correlation changes added after verified commit and require a new 14-suite run."
     },
     {
       "id": "microbenchmark",
       "status": "PASS_DUAL_PRECISION_MEASURED",
-      "evidence": "Exact run a8db0cbbb78f-1873d453-6ae773968c56a254 has 236 measured FFT/convolution/DCT/FIR cases (118 independent binary32, 118 binary64); nine real raw samples each, 2124 total with median, p10/p90, MAD validated independently. GCC 13.3.0 -O3 -DNDEBUG -std=c++23 -march=native -fno-omit-frame-pointer, i7-13700KF, 102 available CPU ISA flags; published SHA256 68f30f984b683c8cf22031f18cf592fcbdc789568b21d361ac0865e7ccad43bd. Speedup ratios limited to matched precision, shape, allocation regime. Single-machine and CPU conditions uncontrolled."
+      "evidence": "Measured e53a2cefa111-1873d453-c0686d8e9a32d4cc exact GitHub artifact SHA256 821f05b6d6eae4ee273bb4f607f57ec30062e58d1ba2ba1e73b86c1a47a8f9b1 contains 236 native binary32/binary64 FFT/convolution/DCT/FIR cases, 118 per precision, nine positive timing samples each (2,124 total), validated medians/interpolated p10/p90/MAD and matched method/regime speedups, CPU Intel i7-13700KF, GCC13.3, compiler flags and 102 ISA availability flags. Single-machine empirical variability only."
     },
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "14-suite run verified finite IIR general/first-order/biquad/SOS constructors and fourth-order SOS recurrence. Found subsequent ZPK-to-SOS projection could silently drop imaginary residues from approximately conjugate (but not truly conjugate) roots, and conversion/analog frequency accepted NaN/Inf. New design guard rejects nonfinite roots/gain/frequency and nonfinite output coefficients; SOS section checks polynomial imaginary residues before projecting to real; adversarial malformed ZPK, conjugate mismatch and valid-identity tests added to iir_domains pending next CI."
+      "evidence": "Source e53a2cefa111b1848b76a67050541ff2c1c56e14 validates finite direct ZPK roots and gain, analog evaluation frequencies, realness of SOS coefficients, and rejects NaN/Inf and nonconjugate root projection; passed 14/14 active-assertion Release/ASan/UBSan. Next audit found finite high/low amplitude correlation can overflow or underflow the raw float/double correlation numerator despite a finite normalized answer. New scalar-range-aware extended-precision direct-lag fallback and float32/float64 real/complex adversarial regression committed but not locally executed."
     },
     {
       "id": "website",
-      "status": "PASS_FOURTEEN_SUITE_MEASURED_ARTIFACT",
-      "evidence": "Feature commit bc344e8475a96503d7dc4678805280190ff1f322 pins report a8db0cbbb78f-1873d453-6ae773968c56a254 and exact GitHub measured artifact SHA256 68f30f984b683c8cf22031f18cf592fcbdc789568b21d361ac0865e7ccad43bd; 236 precision-aware rows / 2124 raw timing samples. GitHub Actions run 42222522016 SUCCESS: Astro 0 errors/0 warnings, 3/3 provenance tests, build, smoke 23 static+1 proxied. No claim of data for unverified current source."
+      "status": "PASS_FOURTEEN_ZPK_ARTIFACT",
+      "evidence": "Feature commit 9eede12911dfaa2592991144b642992c3d935c5c pins measured e53a2cefa111-1873d453-c0686d8e9a32d4cc, exact published SHA256 821f05b6d6eae4ee273bb4f607f57ec30062e58d1ba2ba1e73b86c1a47a8f9b1, 236 precision-selectable method/shape cases, 2,124 raw timing samples, accessible charts/tables. Workflow 42223987117 PASS: Astro 0 errors/warnings, 3/3 benchmark data provenance tests, full build and 23-static+1-proxied smoke. No web benchmark attribution for newer untested correlation code."
     },
     {
       "id": "reproducibility",
@@ -36,20 +36,20 @@
     }
   ],
   "not_verified": [
-    "New finite ZPK validation, strict real SOS polynomial coefficient checks and malformed conjugate/NaN/Inf input tests are committed AFTER verified source a8db0cb; require another 14/14 Release and 14/14 ASan/UBSan CI with assertions enabled",
-    "Measured benchmark artifact and website apply only to verified source a8db0cb; no benchmark evidence yet for current post-ZPK source changes, next run must publish 236 native binary32/binary64 cases and 2124 raw timing samples",
-    "Extreme high-order Bessel/elliptic and near-unit IIR condition numbers, full exceptional-input contracts, multi-precision high-accuracy reference methods and formal stability/accuracy bounds remain unverified",
-    "FFTW/SciPy or competing DSP baselines, cross-compiler/ISA/platform validation, thermal/frequency control, independent multi-machine replication and memory throughput remain unmeasured"
+    "Post-verified source 796c2e3 fixes underflow/overflow in finite high/low amplitude normalized correlation and extends independent oracle to real/complex float32 and float64: must pass 14/14 Release and 14/14 ASan/UBSan CTests and assertion-on gates in next laptop CI",
+    "New source correlation changes have no published benchmark/parser campaign; run 236 method/shape cases (118 per precision, nine raw samples each), and keep website attribution pinned exclusively to verified source e53a2ce",
+    "Long-double range and precision vary by platform (may equal double); extreme amplitude guarantees require cross-platform testing; arbitrary high-order/near-unit IIR conditioning, NaN/Inf survey across all DSP APIs and formal global error/stability proof remain unverified",
+    "External FFTW/SciPy and other DSP baselines, cross-compiler/ISA/platform, controlled CPU thermal/frequency behavior, memory/throughput and independent multi-machine measurement remain unverified"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Next laptop Local CI must compile new ZPK invalid-domain fixtures, run expected 14/14 Release -UNDEBUG and 14/14 ASan/UBSan and review any previously accepted malformed conjugate case without weakening thresholds. Verify all 236 precision-specific FFT/convolution/DCT/FIR timings and 9 samples per case on pinned source, parser tests; update website only with new GitHub measurements if warranted. Remain ACTIVE until numerical/reproducibility limitations explicitly reviewed.",
+  "next": "Next laptop Local CI run must compile updated normalized correlation, run all 14 Release and 14 ASan/UBSan CTests with assertions enabled, specifically extreme amplitude normalized correlation for float32/64 real/complex; verify 236-case native binary32/64 nine-sample timings and parser, examine exact new report. Current website stays pinned to verified ZPK/SOS run. Keep ACTIVE.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "a8db0cbbb78f-1873d453-6ae773968c56a254",
-    "source_sha": "a8db0cbbb78fcef4cdba30457abc54696a44b9f7",
+    "run_id": "e53a2cefa111-1873d453-c0686d8e9a32d4cc",
+    "source_sha": "e53a2cefa111b1848b76a67050541ff2c1c56e14",
     "config_sha": "1873d453ccf98ce9e38582ea70b25c303c25b9da",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/a8db0cbbb78f-1873d453-6ae773968c56a254",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/e53a2cefa111-1873d453-c0686d8e9a32d4cc",
     "release_ctest": 14,
     "asan_ubsan_ctest": 14,
     "assertions_enabled": true,
@@ -63,7 +63,7 @@
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
     "benchmark_source_sha256": "85a3c51d593800ec2c7fc137aeee1bc2f86701c04cf999d66a6bf0fef73a4198",
-    "benchmark_artifact_sha256": "68f30f984b683c8cf22031f18cf592fcbdc789568b21d361ac0865e7ccad43bd"
+    "benchmark_artifact_sha256": "821f05b6d6eae4ee273bb4f607f57ec30062e58d1ba2ba1e73b86c1a47a8f9b1"
   },
   "previous_failed_ci": {
     "status": "FAIL",
@@ -84,15 +84,15 @@
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
-  "website_commit": "bc344e8475a96503d7dc4678805280190ff1f322",
+  "website_commit": "9eede12911dfaa2592991144b642992c3d935c5c",
   "coordinator_pending_commit": null,
   "website_verification": {
     "status": "PASS",
-    "run_id": 42222522016,
+    "run_id": 42223987117,
     "workflow": "Bouncing Balls verification",
-    "tested_sha": "bc344e8475a96503d7dc4678805280190ff1f322",
-    "tests": "Astro check 0 errors and warnings; benchmark provenance tests 3/3; full build and smoke 23 static + 1 proxied routes passed",
-    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42222522016"
+    "tested_sha": "9eede12911dfaa2592991144b642992c3d935c5c",
+    "tests": "Astro check 0 errors and 0 warnings, benchmark provenance tests 3/3, build and 23-static + 1-proxied smoke passed",
+    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42223987117"
   },
   "last_resolved_failed_ci": {
     "status": "FAIL",
