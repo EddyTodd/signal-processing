@@ -240,6 +240,45 @@ void verify_sparse_end_energy() {
     }
 }
 
+// Very small/large *finite* input samples can make the intermediate
+// unnormalized correlation underflow/overflow in float or double.
+// Normalization is well-defined; long-double reference products verify
+// that both APIs preserve scale invariance and conjugate lag signs.
+template <typename Sample>
+void verify_extreme_scale_normalization() {
+    using T=Scalar<Sample>;
+    const Wide tolerance=std::same_as<T,float>?Wide{0.002}:Wide{3.e-10};
+    const std::array<T,2> scales{
+        std::numeric_limits<T>::min()*T{32},
+        std::numeric_limits<T>::max()/T{1024}};
+    for(const T scale:scales) {
+        for(const std::size_t n:{1U,3U,5U}) {
+            std::vector<Sample> x(n),y(n);
+            for(std::size_t i=0;i<n;++i) {
+                const T u=scale*static_cast<T>(
+                    (static_cast<Wide>(i)+Wide{1})/Wide{16});
+                const T v=scale*static_cast<T>(
+                    (static_cast<Wide>(n-i)+Wide{1})/Wide{20});
+                if constexpr (std::same_as<Sample,T>) {
+                    x[i]=i%2==0?u:-u;
+                    y[i]=v;
+                } else {
+                    x[i]=Sample{i%2==0?u:-u,u/T{4}};
+                    y[i]=Sample{v,-v/T{8}};
+                }
+            }
+            const auto expected=cross_reference(x,y,true);
+            compare(corr::normalized_direct<Sample>(x,y),expected,
+                    tolerance,"extreme_normalized_direct",n,n);
+            compare(corr::normalized_fft<Sample>(x,y),expected,
+                    tolerance*Wide{3},"extreme_normalized_fft",n,n);
+            // The direct normalization must not lose the nonzero
+            // single-tap overlap at the far boundary.
+            assert(std::abs(expected[0])>Wide{0.5});
+        }
+    }
+}
+
 template <typename Sample>
 void invalid_domains() {
     const std::vector<Sample> x{Sample{1},Sample{2},Sample{3}};
@@ -274,6 +313,7 @@ void run() {
             for(const std::size_t pattern:{0U,1U,2U})
                 linear_case<Sample>(n,m,pattern);
     verify_sparse_end_energy<Sample>();
+    verify_extreme_scale_normalization<Sample>();
     verify_circular<Sample>();
     invalid_domains<Sample>();
 }

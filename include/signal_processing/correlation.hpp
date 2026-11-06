@@ -102,7 +102,22 @@ template <signal_processing::detail::Sample T>
         // Compute square roots separately to reduce product overflow.
         const long double denominator = std::sqrt(left) * std::sqrt(right);
         if (!(denominator > 0.L)) continue; // Zero-energy overlap maps to zero.
-        if (from_fft && denominator <= fft_roundoff_floor) {
+        // Cross-correlation accumulates in the public scalar format, so
+        // products can underflow to zero or overflow to infinity even
+        // when the *normalized* result has magnitude <= 1. Guard both
+        // direct and FFT paths, not only ill-conditioned FFT overlaps.
+        const bool raw_finite = [&]() {
+            if constexpr (signal_processing::detail::SampleTraits<T>::is_complex)
+                return std::isfinite(raw[index].real()) &&
+                       std::isfinite(raw[index].imag());
+            else
+                return std::isfinite(raw[index]);
+        }();
+        const bool scalar_range_lost =
+            denominator < static_cast<long double>(std::numeric_limits<Scalar>::min()) ||
+            denominator > static_cast<long double>(std::numeric_limits<Scalar>::max());
+        if (!raw_finite || scalar_range_lost ||
+            (from_fft && denominator <= fft_roundoff_floor)) {
             std::complex<long double> numerator{};
             for (auto i = i_first; i < i_last; ++i) {
                 const auto j = i - lag;
