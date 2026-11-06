@@ -10,6 +10,9 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstdlib>
+#include <iomanip>
+#include <iostream>
 #include <cmath>
 #include <complex>
 #include <concepts>
@@ -47,7 +50,7 @@ Vector<T> stimulus(std::size_t n, Pattern pattern, std::uint32_t seed) {
             values[j] = {T{0.625},T{-0.125}};
             break;
         case Pattern::alternating:
-            values[j] = {j % 2 ? T{-0.8} : T{0.8}, T{0.0}};
+            values[j] = {j % 2 ? static_cast<T>(-0.8L) : static_cast<T>(0.8L), T{0.0}};
             break;
         case Pattern::coherent_tone: {
             const auto angle = T{2}*std::numbers::pi_v<T>*
@@ -56,8 +59,8 @@ Vector<T> stimulus(std::size_t n, Pattern pattern, std::uint32_t seed) {
             break;
         }
         case Pattern::mixed_dynamic_range:
-            values[j] = j % 7 == 0 ? C<T>{T{10},T{0.2}} :
-                C<T>{T{0.0001}*distribution(rng),T{0.0001}*distribution(rng)};
+            values[j] = j % 7 == 0 ? C<T>{T{10},static_cast<T>(0.2L)} :
+                C<T>{static_cast<T>(0.0001L)*distribution(rng),static_cast<T>(0.0001L)*distribution(rng)};
             break;
         }
     }
@@ -90,20 +93,42 @@ std::vector<C<long double>> reference_dft(std::span<const C<T>> input,
 template <typename T>
 void compare(std::span<const C<T>> got,
              std::span<const C<long double>> reference,
-             const char* /*algorithm*/) {
+             const char* algorithm, std::size_t n, Pattern pattern,
+             std::uint32_t seed, const char* phase) {
     assert(got.size()==reference.size());
     const long double tol=std::same_as<T,float> ? 0.0008L : 1.0e-10L;
     long double square_error=0.L,square_reference=0.L;
     for(std::size_t i=0;i<got.size();++i){
-        assert(std::isfinite(got[i].real())&&std::isfinite(got[i].imag()));
         const C<long double> actual{got[i].real(),got[i].imag()};
         const auto deviation=std::abs(actual-reference[i]);
-        assert(deviation<=tol*(1.L+std::abs(reference[i])));
+        const auto bound=tol*(1.L+std::abs(reference[i]));
+        if(!std::isfinite(got[i].real())||!std::isfinite(got[i].imag())||
+           !(deviation<=bound)) {
+            std::cerr << std::scientific << std::setprecision(17)
+                << "PRECISION_FAILURE precision=" << (std::same_as<T,float>?"float32":"float64")
+                << " algorithm=" << algorithm << " length=" << n
+                << " pattern=" << static_cast<int>(pattern) << " seed=" << seed
+                << " stage=" << phase << " index=" << i
+                << " got=(" << actual.real() << "," << actual.imag() << ")"
+                << " reference=(" << reference[i].real() << "," << reference[i].imag() << ")"
+                << " absolute_error=" << deviation << " allowed=" << bound
+                << " relative_bound=" << tol << std::endl;
+            std::abort();
+        }
         square_error += std::norm(actual-reference[i]);
         square_reference += std::norm(reference[i]);
     }
-    assert(std::sqrt(square_error)<=tol*
-           (1.L+std::sqrt(square_reference)));
+    const auto rms_error=std::sqrt(square_error);
+    const auto rms_bound=tol*(1.L+std::sqrt(square_reference));
+    if(!(rms_error<=rms_bound)){
+        std::cerr << "PRECISION_FAILURE_RMS precision="
+            << (std::same_as<T,float>?"float32":"float64")
+            << " algorithm=" << algorithm << " length=" << n
+            << " pattern=" << static_cast<int>(pattern)
+            << " seed=" << seed << " stage=" << phase
+            << " rms_error=" << rms_error << " allowed=" << rms_bound << std::endl;
+        std::abort();
+    }
 }
 
 template <typename T>
@@ -111,9 +136,9 @@ void check_transform(std::size_t n,Pattern pattern,std::uint32_t seed) {
     const auto input=stimulus<T>(n,pattern,seed);
     const auto reference=reference_dft<T>(input,fft::Direction::forward);
     auto check=[&](const char* name,const Vector<T>& actual){
-        compare<T>(actual,reference,name);
+        compare<T>(actual,reference,name,n,pattern,seed,"forward");
         const auto backward=reference_dft<T>(actual,fft::Direction::inverse);
-        compare<T>(input,backward,name);
+        compare<T>(input,backward,name,n,pattern,seed,"inverse-reconstruction");
     };
     check("direct",fft::dft<T>(input));
     check("mixed_radix",fft::mixed_radix<T>(input));
@@ -135,7 +160,7 @@ void check_transform(std::size_t n,Pattern pattern,std::uint32_t seed) {
     // instead of checking an inverse that is only computed by the oracle.
     const auto inverse_reference=reference_dft<T>(input,fft::Direction::inverse);
     auto check_inverse=[&](const char* name,const Vector<T>& actual){
-        compare<T>(actual,inverse_reference,name);
+        compare<T>(actual,inverse_reference,name,n,pattern,seed,"inverse");
     };
     check_inverse("direct_inverse",fft::dft<T>(input,fft::Direction::inverse));
     check_inverse("mixed_radix_inverse",fft::mixed_radix<T>(input,fft::Direction::inverse));

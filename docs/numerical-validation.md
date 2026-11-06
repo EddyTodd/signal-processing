@@ -50,3 +50,13 @@ and float64 algorithms, structured signals and varied lengths. The 118-case
 single-machine binary64 benchmark campaign also passed with nine timing
 samples per case. This validates tested finite cases only; the 24-size,
 additional-seed suite added after this run requires separate CI evidence.
+
+## Extended float32 size campaign: unresolved precision failure
+
+The larger 24-size/multi-seed suite failed 1/9 Release CTest executables on
+`a07e7ec3aba685b76e2e6fb71cb561641ced8e7f`, while eight older suites
+passed. An assertion reported a float32 error greater than the original
+`0.0008 * (1 + |reference|)` bound, but omitted algorithm and specimen identity.
+The follow-up adds explicit method/size/pattern/seed/phase/index and observed
+error/bound diagnostics, **without changing the numerical acceptance tolerance**.
+The algorithm and cause remain unverified until new actual CI evidence arrives.

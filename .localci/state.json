@@ -39,11 +39,12 @@
     "Newly expanded 24-size and multiple-seed numerical precision suite has not passed the next pinned local CI run",
     "IIR exceptional input and filter stability on broad parameter domains not independently certified",
     "Third-party FFTW/SciPy comparison, cross-compiler/cross-platform/ISA benchmark and float32 performance campaign not conducted",
-    "No arbitrary-precision global error proof or full DSP API audit"
+    "No arbitrary-precision global error proof or full DSP API audit",
+    "Expanded 24-size multi-seed precision suite FAILS for float32; exact failing input/algorithm pending CI diagnostic; do not mark baseline PASS for this revision"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Run expanded 24-size multi-seed float32/float64 numerical suite via local CI; inspect exact result; expand independent filter/IIR/spectral reference and comparative benchmarks.",
+  "next": "Inspect per-algorithm numerical mismatch diagnostic from the next source CI run. Fix actual algorithm or derive precision-scaled defensible bound; do not loosen tolerance without evidence.",
   "current_verified_ci": {
     "status": "PASS",
     "run_id": "5e8707acd4b8-358bd155-9b69a8ab6020425d",
@@ -56,5 +57,15 @@
     "raw_samples": 1062,
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF"
+  },
+  "current_failed_ci": {
+    "status": "FAIL",
+    "source_sha": "a07e7ec3aba685b76e2e6fb71cb561641ced8e7f",
+    "run_id": "a07e7ec3aba6-37a1862a-95cb756cf5491fcb",
+    "stage": "release-numerical-tests",
+    "passed_ctest": 8,
+    "total_ctest": 9,
+    "failure": "float32 long-double-oracle numerical_precision error exceeded unchanged 0.0008*(1+abs(reference)) bound; exact method/input currently unknown",
+    "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/a07e7ec3aba6-37a1862a-95cb756cf5491fcb"
   }
 }
