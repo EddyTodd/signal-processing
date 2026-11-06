@@ -46,6 +46,10 @@ if(SIGNAL_PROCESSING_BUILD_TESTS)
     signal_processing_configure_test(signal_processing_iir)
     add_test(NAME signal_processing_iir COMMAND signal_processing_iir)
 
+    add_executable(signal_processing_iir_oracles tests/iir_oracles.cpp)
+    signal_processing_configure_test(signal_processing_iir_oracles)
+    add_test(NAME signal_processing_iir_oracles COMMAND signal_processing_iir_oracles)
+
     add_executable(signal_processing_spectral tests/spectral.cpp)
     signal_processing_configure_test(signal_processing_spectral)
     add_test(NAME signal_processing_spectral COMMAND signal_processing_spectral)

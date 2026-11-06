@@ -7,27 +7,27 @@
     {
       "id": "numerical-oracle",
       "status": "PASS_EXPANDED_FINITE_SUITE",
-      "evidence": "Expanded 24-size/multi-seed independent long-double float32/float64 transform precision suite passed, 9/9 Release CTests at 19047b0782bf03e3fc4e9716d73f25781c4ef590. Previously diagnosed float32 direct DFT DC cancellation corrected without widening 0.0008*(1+|reference|) bound. Stricter analytic DC cancellation regression added after this pass; pending new Release verification."
+      "evidence": "Verified 24-size/multi-seed float32+float64 independent long-double FFT oracle and tightened analytic DC leakage checks on 60f0923; 9/9 Release CTest executables. New long-double IIR pole/difference-equation oracle newly added, not yet CI-tested."
     },
     {
       "id": "sanitizers",
       "status": "PASS_EXPANDED_FINITE_SUITE",
-      "evidence": "9/9 CTest suites passed under AddressSanitizer and UndefinedBehaviorSanitizer at 19047b0782bf03e3fc4e9716d73f25781c4ef590; assertion checks enabled. New stricter DC regression added after this evidence; not yet sanitizer-tested."
+      "evidence": "9/9 ASan/UBSan CTest executables passed on source 60f0923 with assertions enabled; new IIR test target pending sanitized CI."
     },
     {
       "id": "microbenchmark",
-      "status": "PASS_MEASURED_SINGLE_MACHINE",
-      "evidence": "118 binary64 method/shape comparisons measured on Intel i7-13700KF GCC 13.3.0 using repeated samples and reported medians/spread at 19047b0782bf03e3fc4e9716d73f25781c4ef590; float32, third-party and cross-machine still unmeasured. New separately compiled binary32 + binary64 timed comparison is pending a fresh laptop run. Matched same-source-hash binary64 direct-DFT timings reviewed for N=16..256 across pinned 5e8707a and 19047b0 campaigns; small single-machine median differences do not prove speed changes."
+      "status": "PASS_DUAL_PRECISION_MEASURED",
+      "evidence": "Published source 60f0923: 236 cases = 118 each binary32 and binary64, 9 raw timed samples each (2124 total), GCC 13.3.0 i7-13700KF; separate template instantiations, CPU ISA capability metadata, median/p10/p90/MAD; no cross-precision ratios. External and cross-platform baselines pending."
     },
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "Independent long-double reference and analytic DC cancellation identities across float32/float64; extended 24-size suite verified at 19047b0. New tighter regression pending. IIR parameter-domain stability, exceptional inputs, conditioning and cross-machine breadth remain."
+      "evidence": "FFT cancellation fixed and verified with independent long-double and analytic DC tests. New separate known-pole IIR analytical long-double and rational frequency-response oracles on float32/64 are unverified until next Release/ASan-UBSan CI; exceptional NaN/Inf behavior across whole DSP API, high-order conditioning and platform breadth remain."
     },
     {
       "id": "website",
-      "status": "PASS_VERIFIED_BINARY64",
-      "evidence": "Website feature branch b5a64e58ebe4e44d32507f720c58ff0ded6440a9 now publishes the verified 19047b0 binary64 artifact with 118 cases, 1062 raw timing samples, 9/9 Release and 9/9 ASan/UBSan evidence and accessible chart/table; float32 performance pending."
+      "status": "UPDATED_DUAL_PRECISION_PENDING_SITE_BUILD",
+      "evidence": "Feature branch 0352b0fc82c637723aec7a82bd592209681c2d14 shows reviewed 236-case GitHub microbenchmark artifact, 2124 samples, with precision selector and precision-safe comparisons. Site build/test verification of new website commit pending."
     },
     {
       "id": "reproducibility",
@@ -36,29 +36,33 @@
     }
   ],
   "not_verified": [
-    "New analytic DC cancellation regression N=128/256/257 forward/inverse has not yet run in pinned Release or sanitizer CI",
-    "New coordinator dual-precision binary32/binary64 microbenchmark campaign has not yet produced laptop timings; website stays on verified binary64-only data until evidence review",
-    "IIR exceptional input behavior and stability across broad parameter domains not independently certified",
-    "Cross-compiler/ISA/platform, FFTW/SciPy reference comparisons, throughput and memory campaigns, and arbitrary-precision global error proofs not completed",
-    "Latest website branch b5a64e5 has verified benchmark provenance but an updated full website build/check has not been separately reviewed for this commit"
+    "New signal_processing_iir_oracles CTest target not yet run in Release or ASan/UBSan; no broad IIR stability or pole-conditioning certification",
+    "Full website build/test for feature commit 0352b0fc82c637723aec7a82bd592209681c2d14 not yet independently verified",
+    "No separate proof of C++ compiler instructions from CPU ISA capabilities; no FFTW/SciPy third-party, cross-compiler/platform/ISA benchmark or memory/throughput study",
+    "Finite and structured numerical oracles cannot certify all NaN/Inf propagation, arbitrary-precision error or all DSP API contracts"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Validate new analytic DC test in Release and ASan/UBSan and newly compiled float32 FFT/convolution/DCT/FIR microbenchmarks on the laptop; review matched-precision samples and website build, then extend independent IIR/spectral adversarial oracles. Remain ACTIVE.",
+  "next": "Run new independent IIR oracle CTest target (expect 10 Release and 10 ASan/UBSan suites), inspect numeric diagnostics and repair actual faults. Review dual-precision website build on feature branch; then extend spectral/STFT reconstruction and adversarial behavior. No COMPLETE pending remaining research gates.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "19047b0782bf-32ac4220-d21dde9956499eed",
-    "source_sha": "19047b0782bf03e3fc4e9716d73f25781c4ef590",
-    "config_sha": "32ac4220897e3d41b16324f29eb682da0b65cc02",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/19047b0782bf-32ac4220-d21dde9956499eed",
+    "run_id": "60f092336418-cc8a52e4-85de15eedeb8b224",
+    "source_sha": "60f0923364188f9cfb728c40676c1adf6015e063",
+    "config_sha": "cc8a52e49ba0c06578c2ec698c0bc605fa40a1c5",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/60f092336418-cc8a52e4-85de15eedeb8b224",
     "release_ctest": 9,
     "asan_ubsan_ctest": 9,
-    "bench_cases": 118,
-    "raw_samples": 1062,
+    "assertions_enabled": true,
+    "bench_cases": 236,
+    "bench_cases_per_precision": 118,
+    "raw_samples": 2124,
+    "benchmark_precisions": [
+      "binary32",
+      "binary64"
+    ],
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
-    "assertions_enabled": true,
-    "benchmark_precision": "binary64"
+    "benchmark_artifact_sha256": "e5eee46e34bdbb085bef75c79c759c5c8ac62b8b3d7c6365bcf71e0911d5b5f9"
   },
   "previous_failed_ci": {
     "status": "FAIL",
@@ -79,6 +83,6 @@
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
-  "website_commit": "b5a64e58ebe4e44d32507f720c58ff0ded6440a9",
-  "coordinator_pending_commit": "cc8a52e49ba0c06578c2ec698c0bc605fa40a1c5"
+  "website_commit": "0352b0fc82c637723aec7a82bd592209681c2d14",
+  "coordinator_pending_commit": null
 }

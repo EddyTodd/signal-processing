@@ -126,3 +126,15 @@ These are two distinct laptop runs; p10/p90 is within-run observed spread,
 **not a confidence interval**. Differences do not establish a performance
 improvement or regression, and these numbers describe the **binary64 path**,
 not the newly corrected float32 path.
+
+## Independent IIR oracle extension — pending fresh Local CI
+
+A separate CTest target `signal_processing_iir_oracles` now checks binary32
+and binary64 IIR realizations against a direct textbook difference-equation
+reference accumulated in `long double`. Its known conjugate poles span
+radii 0.05–0.985 and distinct angular positions. Deterministic impulse, step,
+alternating and seeded random stimuli test eight realization paths, reset and
+block/scalar equivalence, plus span-length exceptions. A separate complex
+rational response oracle checks DC, Nyquist, interior frequencies, and known
+stability-domain boundaries. These tests are **not yet verified** by Local CI;
+no formal stability or conditioning guarantee is implied for all parameters.
