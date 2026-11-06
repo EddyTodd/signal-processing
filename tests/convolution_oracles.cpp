@@ -189,6 +189,33 @@ void linear_case(std::size_t n,std::size_t m,std::size_t pattern) {
 }
 
 template <typename Sample>
+void verify_circular() {
+    const Wide tol=std::same_as<Scalar<Sample>,float>?Wide{0.0004}:Wide{3.e-10};
+    for(const std::size_t n:{0U,1U,2U,3U,5U,8U,11U,17U}) {
+        const auto x=signal<Sample>(n,0);
+        const auto h=signal<Sample>(n,2);
+        std::vector<CW> expected(n,CW{});
+        for(std::size_t i=0;i<n;++i)
+            for(std::size_t j=0;j<n;++j)
+                expected[(i+j)%n]+=to_wide(x[i])*to_wide(h[j]);
+        compare(conv::circular<Sample>(x,h),expected,tol,
+                "circular_definition",n,n);
+        compare(conv::circular_bluestein<Sample>(x,h),expected,tol*Wide{8},
+                "circular_bluestein",n,n);
+    }
+    const std::array<Sample,2> x{Sample{1},Sample{2}};
+    const std::array<Sample,1> h{Sample{3}};
+    bool threw=false;
+    try{(void)conv::circular<Sample>(x,h);}
+    catch(const std::invalid_argument&){threw=true;}
+    assert(threw);
+    threw=false;
+    try{(void)conv::circular_bluestein<Sample>(x,h);}
+    catch(const std::invalid_argument&){threw=true;}
+    assert(threw);
+}
+
+template <typename Sample>
 void verify_sparse_end_energy() {
     using T=Scalar<Sample>;
     for(const Wide weak:{Wide{0.0001},Wide{0.000000001}}) {
@@ -247,6 +274,7 @@ void run() {
             for(const std::size_t pattern:{0U,1U,2U})
                 linear_case<Sample>(n,m,pattern);
     verify_sparse_end_energy<Sample>();
+    verify_circular<Sample>();
     invalid_domains<Sample>();
 }
 } // namespace
