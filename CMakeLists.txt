@@ -53,4 +53,9 @@ if(SIGNAL_PROCESSING_BUILD_TESTS)
     add_executable(signal_processing_numerical_contracts tests/numerical_contracts.cpp)
     signal_processing_configure_test(signal_processing_numerical_contracts)
     add_test(NAME signal_processing_numerical_contracts COMMAND signal_processing_numerical_contracts)
+
+    add_executable(signal_processing_numerical_precision tests/numerical_precision.cpp)
+    signal_processing_configure_test(signal_processing_numerical_precision)
+    add_test(NAME signal_processing_numerical_precision
+             COMMAND signal_processing_numerical_precision)
 endif()

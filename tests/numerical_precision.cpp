@@ -1,0 +1,163 @@
+// Independent high-precision Fourier reference across float32 and float64,
+// including prime/composite sizes, structured/adversarial inputs and inverse
+// normalization. No implementation-internal FFT kernels are reused.
+#ifdef NDEBUG
+#error "numerical_precision must run with C++ assertions enabled in Release"
+#endif
+
+#include "signal_processing/fft.hpp"
+
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cmath>
+#include <complex>
+#include <concepts>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <numbers>
+#include <random>
+#include <span>
+#include <stdexcept>
+#include <type_traits>
+#include <vector>
+
+namespace {
+namespace fft = signal_processing::fft;
+template <typename T> using C = std::complex<T>;
+template <typename T> using Vector = std::vector<C<T>>;
+
+enum class Pattern { random, impulse, dc, alternating, coherent_tone, mixed_dynamic_range };
+
+template <typename T>
+Vector<T> stimulus(std::size_t n, Pattern pattern, std::uint32_t seed) {
+    Vector<T> values(n);
+    std::mt19937 rng(seed);
+    std::uniform_real_distribution<T> distribution(T{-1}, T{1});
+    for (std::size_t j = 0; j < n; ++j) {
+        switch (pattern) {
+        case Pattern::random:
+            values[j] = {distribution(rng), distribution(rng)};
+            break;
+        case Pattern::impulse:
+            values[j] = j == n/3 ? C<T>{T{1},T{-0.5}} : C<T>{};
+            break;
+        case Pattern::dc:
+            values[j] = {T{0.625},T{-0.125}};
+            break;
+        case Pattern::alternating:
+            values[j] = {j % 2 ? T{-0.8} : T{0.8}, T{0.0}};
+            break;
+        case Pattern::coherent_tone: {
+            const auto angle = T{2}*std::numbers::pi_v<T>*
+                               static_cast<T>((j*3)%n)/static_cast<T>(n);
+            values[j] = {std::cos(angle), std::sin(angle)};
+            break;
+        }
+        case Pattern::mixed_dynamic_range:
+            values[j] = j % 7 == 0 ? C<T>{T{10},T{0.2}} :
+                C<T>{T{0.0001}*distribution(rng),T{0.0001}*distribution(rng)};
+            break;
+        }
+    }
+    return values;
+}
+
+// This O(N^2) reference accumulates in long double, independently from the
+// float/double FFT kernels and from the original binary64 reference suite.
+template <typename T>
+std::vector<C<long double>> reference_dft(std::span<const C<T>> input,
+                                         fft::Direction direction) {
+    const std::size_t n = input.size();
+    std::vector<C<long double>> result(n);
+    const long double sign=direction==fft::Direction::inverse ? 1.L : -1.L;
+    for (std::size_t k=0;k<n;++k) {
+        C<long double> sum{};
+        for (std::size_t j=0;j<n;++j) {
+            const long double angle=sign*2.L*std::numbers::pi_v<long double>*
+                static_cast<long double>(j)*static_cast<long double>(k)/
+                static_cast<long double>(n);
+            sum += C<long double>{input[j].real(),input[j].imag()} *
+                   C<long double>{std::cos(angle),std::sin(angle)};
+        }
+        result[k] = direction==fft::Direction::inverse
+           ? sum/static_cast<long double>(n) : sum;
+    }
+    return result;
+}
+
+template <typename T>
+void compare(std::span<const C<T>> got,
+             std::span<const C<long double>> reference,
+             const char* /*algorithm*/) {
+    assert(got.size()==reference.size());
+    const long double tol=std::same_as<T,float> ? 0.0008L : 1.0e-10L;
+    long double square_error=0.L,square_reference=0.L;
+    for(std::size_t i=0;i<got.size();++i){
+        assert(std::isfinite(got[i].real())&&std::isfinite(got[i].imag()));
+        const C<long double> actual{got[i].real(),got[i].imag()};
+        const auto deviation=std::abs(actual-reference[i]);
+        assert(deviation<=tol*(1.L+std::abs(reference[i])));
+        square_error += std::norm(actual-reference[i]);
+        square_reference += std::norm(reference[i]);
+    }
+    assert(std::sqrt(square_error)<=tol*
+           (1.L+std::sqrt(square_reference)));
+}
+
+template <typename T>
+void check_transform(std::size_t n,Pattern pattern,std::uint32_t seed) {
+    const auto input=stimulus<T>(n,pattern,seed);
+    const auto reference=reference_dft<T>(input,fft::Direction::forward);
+    auto check=[&](const char* name,const Vector<T>& actual){
+        compare<T>(actual,reference,name);
+        const auto backward=reference_dft<T>(actual,fft::Direction::inverse);
+        compare<T>(input,backward,name);
+    };
+    check("direct",fft::dft<T>(input));
+    check("mixed_radix",fft::mixed_radix<T>(input));
+    check("bluestein",fft::bluestein<T>(input));
+    if(fft::is_power_of_two(n)){
+        check("radix2",fft::radix2<T>(input));
+        check("radix2_recursive",fft::radix2_recursive<T>(input));
+        check("stockham",fft::stockham<T>(input));
+        check("radix4",fft::radix4<T>(input));
+        check("split_radix",fft::split_radix<T>(input));
+        check("modified_split_radix",fft::modified_split_radix<T>(input));
+    }
+    if(n>=3 && (n==3||n==5||n==7||n==11||n==17||n==31||n==97))
+        check("rader",fft::rader<T>(input));
+    if(n==6||n==10||n==15||n==21||n==35)
+        check("good_thomas",fft::good_thomas<T>(input));
+}
+
+template <typename T>
+void verify_empty_and_invalid() {
+    const Vector<T> empty;
+    assert(fft::dft<T>(empty).empty());
+    assert(fft::bluestein<T>(empty).empty());
+    const Vector<T> nonpower(7,C<T>{1,0});
+    bool threw=false;
+    try { (void)fft::radix2<T>(nonpower); }
+    catch(const std::invalid_argument&) { threw=true; }
+    assert(threw);
+}
+
+template <typename T>
+void run_precision_suite() {
+    verify_empty_and_invalid<T>();
+    constexpr std::array<std::size_t,20> sizes={1U,2U,3U,4U,5U,6U,7U,8U,10U,
+        11U,15U,16U,17U,21U,31U,32U,35U,64U,97U,128U};
+    for(const auto n:sizes) {
+        for(const auto pattern:{Pattern::random,Pattern::impulse,Pattern::dc,
+            Pattern::alternating,Pattern::coherent_tone,Pattern::mixed_dynamic_range})
+            check_transform<T>(n,pattern,2718U+static_cast<std::uint32_t>(n));
+    }
+}
+} // namespace
+
+int main(){
+    run_precision_suite<float>();
+    run_precision_suite<double>();
+}

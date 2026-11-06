@@ -7,40 +7,54 @@
     {
       "id": "numerical-oracle",
       "status": "IN_PROGRESS",
-      "evidence": "Release assertions and independent seeded FFT/convolution/DCT contracts added; exact local CI still pending"
+      "evidence": "Baseline 8 Release CTest executables PASSED; independent higher-precision float32/float64 transform regression suite is newly added, awaiting fresh CI."
     },
     {
       "id": "sanitizers",
-      "status": "PENDING",
-      "evidence": "Awaiting actual local ASan/UBSan run"
+      "status": "PASS_BASELINE",
+      "evidence": "Baseline 8/8 ASan/UBSan tests passed at source dd299dacc2a4; report dd299dacc2a4-bdccb989-1d39f279acb77f33. New precision tests remain unverified."
     },
     {
       "id": "microbenchmark",
-      "status": "PENDING",
-      "evidence": "External coordinator runner being added; no measured results yet"
+      "status": "PASS_BASELINE",
+      "evidence": "118 measured binary64 benchmark cases, nine trials each (1062 samples); CPU Intel i7-13700KF; compiler GCC 13.3.0; report dd299dacc2a4-bdccb989-1d39f279acb77f33."
     },
     {
       "id": "audit",
-      "status": "PENDING",
-      "evidence": "API, numerical edge cases, precision and filter state audit still outstanding"
+      "status": "IN_PROGRESS",
+      "evidence": "New high-precision long-double transform reference, float/double, structured adversarial inputs, prime/composite/radix-2 algorithms and negative-domain test are added; broader IIR, exceptional-input, numerical-conditioning and cross-machine review remains."
     },
     {
       "id": "website",
-      "status": "PENDING",
-      "evidence": "Website benchmark explorer requires measured CI artifact"
+      "status": "PASS_BASELINE",
+      "evidence": "Verified 118-case data set published on website feature branch commit 8b69ea7a14e473377824c2e379d79fb6eb9d6e32; two GitHub verification workflows succeeded."
     },
     {
       "id": "reproducibility",
       "status": "PENDING",
-      "evidence": "Multi-platform and third-party benchmarks not yet verified"
+      "evidence": "No independent cross-platform/compiler or external FFTW/SciPy benchmarks. WSL single-machine, single-compiler run only."
     }
   ],
   "not_verified": [
-    "No actual WSL CI report for the new task yet",
-    "No measured microbenchmark output yet",
-    "No cross-platform comparison or high-precision reference oracle yet"
+    "New tests/numerical_precision.cpp not yet run in local Release or ASan/UBSan gates",
+    "Full API numerical-domain audit, IIR stability under adversarial coefficients, exceptional inputs and high-dynamic-range conditions incomplete",
+    "Cross-platform, cross-compiler and independent FFTW/SciPy performance baselines not measured",
+    "No formal global error theorem or arbitrary-precision certification"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Inspect the first actual local CI report for the new numeric test and benchmark campaign; fix failures and iterate."
+  "next": "Run new float32/float64 long-double independent reference suite in local CI; diagnose discrepancies, then extend filter/state and cross-compiler accuracy and benchmark campaigns.",
+  "current_verified_ci": {
+    "status": "PASS",
+    "run_id": "dd299dacc2a4-bdccb989-1d39f279acb77f33",
+    "source_sha": "dd299dacc2a4b4ef2c01953c6304da2c8a27de0c",
+    "config_sha": "bdccb989a69ac2e8b971cba58cb761d8ef82eb3f",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/dd299dacc2a4-bdccb989-1d39f279acb77f33",
+    "release_ctest": 8,
+    "asan_ubsan_ctest": 8,
+    "bench_cases": 118,
+    "raw_samples": 1062,
+    "compiler": "GCC 13.3.0",
+    "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF"
+  }
 }
