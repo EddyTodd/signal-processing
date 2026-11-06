@@ -191,9 +191,44 @@ void verify_empty_and_invalid() {
     assert(threw);
 }
 
+// Independent analytical DC transform identity; the original float32
+// precision failure was at length 256, bin 224. Tighten the leakage bound
+// separately from the general long-double oracle and include prime lengths.
+template <typename T>
+void verify_direct_dc_cancellation() {
+    constexpr std::array<std::size_t,3> sizes{128U,256U,257U};
+    for(const auto n:sizes) {
+        const Vector<T> constant(n,C<T>{T{0.625},T{-0.125}});
+        for(const auto direction:{fft::Direction::forward,fft::Direction::inverse}) {
+            const auto actual=fft::dft<T>(constant,direction);
+            const long double scale=direction==fft::Direction::forward
+                ? static_cast<long double>(n) : 1.L;
+            const C<long double> dc{0.625L*scale,-0.125L*scale};
+            const long double tolerance=std::same_as<T,float> ? 5.e-5L : 5.e-8L;
+            for(std::size_t k=0;k<n;++k) {
+                const C<long double> observed{actual[k].real(),actual[k].imag()};
+                const C<long double> expected=k==0 ? dc : C<long double>{};
+                const long double error=std::abs(observed-expected);
+                const long double bound=tolerance*(1.L+std::abs(expected));
+                if(!std::isfinite(actual[k].real())||
+                   !std::isfinite(actual[k].imag())||!(error<=bound)) {
+                    std::cerr << "PRECISION_FAILURE_DC precision="
+                        << (std::same_as<T,float>?"float32":"float64")
+                        << " n=" << n << " k=" << k << " direction="
+                        << (direction==fft::Direction::forward?"forward":"inverse")
+                        << " observed=" << observed << " expected=" << expected
+                        << " error=" << error << " bound=" << bound << std::endl;
+                    std::abort();
+                }
+            }
+        }
+    }
+}
+
 template <typename T>
 void run_precision_suite() {
     verify_empty_and_invalid<T>();
+    verify_direct_dc_cancellation<T>();
     constexpr std::array<std::size_t,24> sizes={1U,2U,3U,4U,5U,6U,7U,8U,10U,
         11U,15U,16U,17U,21U,31U,32U,35U,64U,97U,127U,128U,129U,256U,257U};
     for(const auto n:sizes) {

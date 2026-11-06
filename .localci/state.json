@@ -7,27 +7,27 @@
     {
       "id": "numerical-oracle",
       "status": "PASS_EXPANDED_FINITE_SUITE",
-      "evidence": "Expanded 24-size/multi-seed independent long-double float32/float64 transform precision suite passed, 9/9 Release CTests at 19047b0782bf03e3fc4e9716d73f25781c4ef590. Previously diagnosed float32 direct DFT DC cancellation corrected without widening 0.0008*(1+|reference|) bound."
+      "evidence": "Expanded 24-size/multi-seed independent long-double float32/float64 transform precision suite passed, 9/9 Release CTests at 19047b0782bf03e3fc4e9716d73f25781c4ef590. Previously diagnosed float32 direct DFT DC cancellation corrected without widening 0.0008*(1+|reference|) bound. Stricter analytic DC cancellation regression added after this pass; pending new Release verification."
     },
     {
       "id": "sanitizers",
       "status": "PASS_EXPANDED_FINITE_SUITE",
-      "evidence": "9/9 CTest suites passed under AddressSanitizer and UndefinedBehaviorSanitizer at 19047b0782bf03e3fc4e9716d73f25781c4ef590; assertion checks enabled."
+      "evidence": "9/9 CTest suites passed under AddressSanitizer and UndefinedBehaviorSanitizer at 19047b0782bf03e3fc4e9716d73f25781c4ef590; assertion checks enabled. New stricter DC regression added after this evidence; not yet sanitizer-tested."
     },
     {
       "id": "microbenchmark",
       "status": "PASS_MEASURED_SINGLE_MACHINE",
-      "evidence": "118 binary64 method/shape comparisons measured on Intel i7-13700KF GCC 13.3.0 using repeated samples and reported medians/spread at 19047b0782bf03e3fc4e9716d73f25781c4ef590; float32, third-party and cross-machine still unmeasured."
+      "evidence": "118 binary64 method/shape comparisons measured on Intel i7-13700KF GCC 13.3.0 using repeated samples and reported medians/spread at 19047b0782bf03e3fc4e9716d73f25781c4ef590; float32, third-party and cross-machine still unmeasured. New separately compiled binary32 + binary64 timed comparison is pending a fresh laptop run."
     },
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "New high-precision long-double transform reference, float/double, structured adversarial inputs, prime/composite/radix-2 algorithms and negative-domain test are added; broader IIR, exceptional-input, numerical-conditioning and cross-machine review remains."
+      "evidence": "Independent long-double reference and analytic DC cancellation identities across float32/float64; extended 24-size suite verified at 19047b0. New tighter regression pending. IIR parameter-domain stability, exceptional inputs, conditioning and cross-machine breadth remain."
     },
     {
       "id": "website",
-      "status": "PASS_BASELINE",
-      "evidence": "Verified 118-case data set published on website feature branch commit 8b69ea7a14e473377824c2e379d79fb6eb9d6e32; two GitHub verification workflows succeeded."
+      "status": "PASS_VERIFIED_BINARY64",
+      "evidence": "Website feature branch b5a64e58ebe4e44d32507f720c58ff0ded6440a9 now publishes the verified 19047b0 binary64 artifact with 118 cases, 1062 raw timing samples, 9/9 Release and 9/9 ASan/UBSan evidence and accessible chart/table; float32 performance pending."
     },
     {
       "id": "reproducibility",
@@ -36,15 +36,14 @@
     }
   ],
   "not_verified": [
-    "IIR exceptional input behavior, broad parameter-domain stability, poles and gain not independently certified",
-    "Third-party FFTW/SciPy baselines, cross-compiler/platform/ISA comparisons and float32 performance campaign not conducted",
-    "No arbitrary-precision global error proof or full DSP API audit",
-    "Post-fix direct-DFT per-size speed regression vs the previous pinned baseline has not been fully analyzed; do not claim performance equivalence",
-    "Website results have not been refreshed or verified against this newest source benchmark artifact"
+    "New analytic DC cancellation regression N=128/256/257 forward/inverse has not yet run in pinned Release or sanitizer CI",
+    "New coordinator dual-precision binary32/binary64 microbenchmark campaign has not yet produced laptop timings; website stays on verified binary64-only data until evidence review",
+    "IIR exceptional input behavior and stability across broad parameter domains not independently certified",
+    "Cross-compiler/ISA/platform, FFTW/SciPy reference comparisons, throughput and memory campaigns, and arbitrary-precision global error proofs not completed"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Extend independent IIR stability/gain and spectral reconstruction adversarial oracles; compare matching direct-DFT binary64 benchmark records against prior pinned campaign with uncertainty, publish website updates only from actual artifacts, then re-run pinned Release/ASan-UBSan and full benchmarks.",
+  "next": "Run tightened analytic DC regression under Release and ASan/UBSan plus independent binary32/binary64 native microbenchmarks; inspect all new reports and parser checks before updating website or marking COMPLETE; subsequently extend independent IIR and spectral adversarial oracles.",
   "current_verified_ci": {
     "status": "PASS",
     "run_id": "19047b0782bf-32ac4220-d21dde9956499eed",
@@ -57,7 +56,8 @@
     "raw_samples": 1062,
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
-    "assertions_enabled": true
+    "assertions_enabled": true,
+    "benchmark_precision": "binary64"
   },
   "previous_failed_ci": {
     "status": "FAIL",
@@ -77,5 +77,7 @@
       "original_bound": 0.0008
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
-  }
+  },
+  "website_commit": "b5a64e58ebe4e44d32507f720c58ff0ded6440a9",
+  "coordinator_pending_commit": "f9be5a99b842973e9e42f534c97c8ed01dc8ab7a"
 }

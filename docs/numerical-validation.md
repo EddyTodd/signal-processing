@@ -51,7 +51,7 @@ single-machine binary64 benchmark campaign also passed with nine timing
 samples per case. This validates tested finite cases only; the 24-size,
 additional-seed suite added after this run requires separate CI evidence.
 
-## Extended float32 size campaign: unresolved precision failure
+## Historical failed float32 size campaign (before the correction)
 
 The larger 24-size/multi-seed suite failed 1/9 Release CTest executables on
 `a07e7ec3aba685b76e2e6fb71cb561641ced8e7f`, while eight older suites
@@ -59,7 +59,7 @@ passed. An assertion reported a float32 error greater than the original
 `0.0008 * (1 + |reference|)` bound, but omitted algorithm and specimen identity.
 The follow-up adds explicit method/size/pattern/seed/phase/index and observed
 error/bound diagnostics, **without changing the numerical acceptance tolerance**.
-The algorithm and cause remain unverified until new actual CI evidence arrives.
+A subsequent diagnostic identified the direct-DFT DC cancellation defect; the verified correction is recorded below.
 
 ## Diagnosed float32 direct DFT cancellation (2026-11-06)
 
@@ -72,6 +72,34 @@ angles, trigonometric roots and summation; this is a cancellation-sensitive
 path. The proposed fix computes *only the float32 direct DFT internal phase
 and accumulation* in binary64 and rounds to float32 at the output, while
 retaining the public API and the binary64 path. It has **not yet passed local
-CI** and might alter direct-DFT timings; the follow-up run must test both
-accuracy and performance before reporting a resolved issue. The finite
+CI** at the time of this commit. The subsequent pinned campaign below
+verified finite-case accuracy and binary64 performance. The finite
 error bound was not loosened.
+
+## Verified expanded numerical campaign and direct DFT correction
+
+Local CI report (2026-11-06):
+https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/19047b0782bf-32ac4220-d21dde9956499eed
+
+Source `19047b0782bf03e3fc4e9716d73f25781c4ef590` with coordinator
+`32ac4220897e3d41b16324f29eb682da0b65cc02` passed **9/9 Release**
+and **9/9 ASan/UBSan** CTest executables (assertions enabled), covering the
+expanded 24-length, multi-seed, float32/float64, forward/inverse independent
+long-double O(N²) transform comparisons. The observed float32 direct DFT
+constant-sequence cancellation failure is resolved for this finite suite
+without loosening the prior 0.0008 × (1 + magnitude) threshold.
+
+The associated i7-13700KF / GCC 13.3.0 binary64 benchmark artifact contains
+**118** measured method/shape cases × **9** independent timing samples
+(1,062 total), with median, p10–p90 empirical spread and MAD.
+The website feature branch `b5a64e58ebe4e44d32507f720c58ff0ded6440a9`
+now cites this exact published GitHub artifact, not synthetic values.
+
+**Pending next Local CI:** A stricter analytic DC cancellation test now
+exercises lengths 128, 256 and 257 in both transform directions. Separately,
+coordinator branch `ai/portable-photocraft-coordinator` now builds both
+binary32 and binary64 method templates for independent, matched-regime
+microbenchmarks; fresh float32 samples and this new test must be reviewed
+before reporting either verified. Frequency scaling/thermal state remain
+uncontrolled, and no arbitrary-precision proof, cross-machine/ISA/compiler
+or third-party FFTW/SciPy comparison has been completed.
