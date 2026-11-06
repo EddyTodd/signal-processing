@@ -6,18 +6,18 @@
   "milestones": [
     {
       "id": "numerical-oracle",
-      "status": "PASS_EXTENDED_BASELINE",
-      "evidence": "Independent long-double O(N^2) oracle passed in both Release and ASan/UBSan for float32/float64 forward/inverse methods, nine CTest suites; expanded 24-size/multi-seed regression newly pending CI."
+      "status": "PASS_EXPANDED_FINITE_SUITE",
+      "evidence": "Expanded 24-size/multi-seed independent long-double float32/float64 transform precision suite passed, 9/9 Release CTests at 19047b0782bf03e3fc4e9716d73f25781c4ef590. Previously diagnosed float32 direct DFT DC cancellation corrected without widening 0.0008*(1+|reference|) bound."
     },
     {
       "id": "sanitizers",
-      "status": "PASS_EXTENDED_BASELINE",
-      "evidence": "9/9 ASan/UBSan CTest suites passed at 5e8707a; new larger-size/multi-seed test pending."
+      "status": "PASS_EXPANDED_FINITE_SUITE",
+      "evidence": "9/9 CTest suites passed under AddressSanitizer and UndefinedBehaviorSanitizer at 19047b0782bf03e3fc4e9716d73f25781c4ef590; assertion checks enabled."
     },
     {
       "id": "microbenchmark",
-      "status": "PASS_EXTENDED_BASELINE",
-      "evidence": "118 methods/shapes, nine samples each, same i7-13700KF and GCC 13.3.0 at 5e8707a; no third-party baseline."
+      "status": "PASS_MEASURED_SINGLE_MACHINE",
+      "evidence": "118 binary64 method/shape comparisons measured on Intel i7-13700KF GCC 13.3.0 using repeated samples and reported medians/spread at 19047b0782bf03e3fc4e9716d73f25781c4ef590; float32, third-party and cross-machine still unmeasured."
     },
     {
       "id": "audit",
@@ -36,30 +36,30 @@
     }
   ],
   "not_verified": [
-    "Newly expanded 24-size and multiple-seed numerical precision suite has not passed the next pinned local CI run",
-    "IIR exceptional input and filter stability on broad parameter domains not independently certified",
-    "Third-party FFTW/SciPy comparison, cross-compiler/cross-platform/ISA benchmark and float32 performance campaign not conducted",
+    "IIR exceptional input behavior, broad parameter-domain stability, poles and gain not independently certified",
+    "Third-party FFTW/SciPy baselines, cross-compiler/platform/ISA comparisons and float32 performance campaign not conducted",
     "No arbitrary-precision global error proof or full DSP API audit",
-    "Expanded 24-size multi-seed precision suite FAILS for float32; exact failing input/algorithm pending CI diagnostic; do not mark baseline PASS for this revision",
-    "The float32 direct DFT binary64-accumulation fix is committed but not yet tested in local CI"
+    "Post-fix direct-DFT per-size speed regression vs the previous pinned baseline has not been fully analyzed; do not claim performance equivalence",
+    "Website results have not been refreshed or verified against this newest source benchmark artifact"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Run source-level float32 direct DFT binary64-accumulation fix through Release/ASan-UBSan and microbenchmark CI; inspect any remaining mismatches and measured direct DFT regression, then move on to other algorithm families.",
+  "next": "Extend independent IIR stability/gain and spectral reconstruction adversarial oracles; compare matching direct-DFT binary64 benchmark records against prior pinned campaign with uncertainty, publish website updates only from actual artifacts, then re-run pinned Release/ASan-UBSan and full benchmarks.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "5e8707acd4b8-358bd155-9b69a8ab6020425d",
-    "source_sha": "5e8707acd4b836828418f4177a4c39aa83b0dbc4",
-    "config_sha": "358bd1551660d434d9b65283dd82d0c7525b5ffc",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/5e8707acd4b8-358bd155-9b69a8ab6020425d",
+    "run_id": "19047b0782bf-32ac4220-d21dde9956499eed",
+    "source_sha": "19047b0782bf03e3fc4e9716d73f25781c4ef590",
+    "config_sha": "32ac4220897e3d41b16324f29eb682da0b65cc02",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/19047b0782bf-32ac4220-d21dde9956499eed",
     "release_ctest": 9,
     "asan_ubsan_ctest": 9,
     "bench_cases": 118,
     "raw_samples": 1062,
     "compiler": "GCC 13.3.0",
-    "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF"
+    "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
+    "assertions_enabled": true
   },
-  "current_failed_ci": {
+  "previous_failed_ci": {
     "status": "FAIL",
     "run_id": "586e4b52f74d-348e2e17-e28b3d2a64762719",
     "tested_sha": "586e4b52f74dc33332ea06d31861e3da0c737646",
