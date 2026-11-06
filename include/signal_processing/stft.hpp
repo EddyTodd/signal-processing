@@ -4,6 +4,7 @@
 #include "signal_processing/fft.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <span>
@@ -28,6 +29,24 @@ struct Result {
 };
 
 namespace detail {
+
+// The forward transform accepts zero-valued windows (including an
+// identically zero one) but cannot meaningfully process NaN/Inf weights.
+// Reconstruction additionally needs every nonzero squared weight to
+// survive accumulation in the public scalar format.
+template <fft::Scalar T>
+void validate_window(std::span<const T> window, bool reconstruction) {
+    for (const T weight : window) {
+        if (!std::isfinite(weight))
+            throw std::invalid_argument("STFT window coefficients must be finite");
+        if (reconstruction && weight != T{}) {
+            const T squared = weight * weight;
+            if (!(squared > T{}) || !std::isfinite(squared))
+                throw std::invalid_argument(
+                    "ISTFT nonzero window weights require finite nonzero squares");
+        }
+    }
+}
 
 [[nodiscard]] inline std::size_t frame_count(std::size_t signal_size, std::size_t frame_size,
                                              std::size_t hop_size, bool pad_end) {
@@ -59,6 +78,7 @@ template <signal_processing::detail::Sample Sample>
 
     if (window.empty()) throw std::invalid_argument("STFT window must be nonempty");
     if (hop_size == 0) throw std::invalid_argument("STFT hop size must be nonzero");
+    detail::validate_window<Scalar>(window, false);
 
     Result<Sample> result;
     result.frame_size = window.size();
@@ -96,9 +116,14 @@ template <signal_processing::detail::Sample Sample>
     if (transform.frame_size == 0 || window.size() != transform.frame_size)
         throw std::invalid_argument("ISTFT window size must match the STFT frame size");
     if (transform.hop_size == 0) throw std::invalid_argument("ISTFT hop size must be nonzero");
+    detail::validate_window<Scalar>(window, true);
     for (const auto& frame : transform.frames) {
         if (frame.size() != transform.frame_size)
             throw std::invalid_argument("ISTFT frame size mismatch");
+        for (const auto bin : frame) {
+            if (!std::isfinite(bin.real()) || !std::isfinite(bin.imag()))
+                throw std::invalid_argument("ISTFT spectral frames must be finite");
+        }
     }
 
     if (output_size == 0) output_size = transform.original_size;
