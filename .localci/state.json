@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "status": "ACTIVE",
+  "task_id": "signal-processing",
+  "goal": "Research-quality C++23 DSP library with numerical correctness, adversarial tests, repeatable local microbenchmarks and an educational website with sourced results",
+  "milestones": [
+    {
+      "id": "numerical-oracle",
+      "status": "PASS_FOURTEEN_FINITE_SUITE",
+      "evidence": "Run a8db0cbbb78f-1873d453-6ae773968c56a254 pinned source a8db0cbbb78fcef4cdba30457abc54696a44b9f7 and coordinator 1873d453ccf98ce9e38582ea70b25c303c25b9da; 14/14 Release CTests with active asserts, including finite IIR coefficient/normalization overflow checks and independent fourth-order long-double SOS oracle, plus long-double FFT, DCT, FIR, convolution, STFT, IIR recurrence oracles. New ZPK/SOS conversion input checks after a8db0cbbb78fcef4cdba30457abc54696a44b9f7 are untested."
+    },
+    {
+      "id": "sanitizers",
+      "status": "PASS_FOURTEEN_SUITE_ASAN_UBSAN",
+      "evidence": "Run a8db0cbbb78f-1873d453-6ae773968c56a254: 14/14 ASan and UBSan CTest executable passes with -UNDEBUG assertions enabled. New ZPK validation and malformed-conjugate tests added after verified commit require another 14-suite run."
+    },
+    {
+      "id": "microbenchmark",
+      "status": "PASS_DUAL_PRECISION_MEASURED",
+      "evidence": "Exact run a8db0cbbb78f-1873d453-6ae773968c56a254 has 236 measured FFT/convolution/DCT/FIR cases (118 independent binary32, 118 binary64); nine real raw samples each, 2124 total with median, p10/p90, MAD validated independently. GCC 13.3.0 -O3 -DNDEBUG -std=c++23 -march=native -fno-omit-frame-pointer, i7-13700KF, 102 available CPU ISA flags; published SHA256 68f30f984b683c8cf22031f18cf592fcbdc789568b21d361ac0865e7ccad43bd. Speedup ratios limited to matched precision, shape, allocation regime. Single-machine and CPU conditions uncontrolled."
+    },
+    {
+      "id": "audit",
+      "status": "IN_PROGRESS",
+      "evidence": "14-suite run verified finite IIR general/first-order/biquad/SOS constructors and fourth-order SOS recurrence. Found subsequent ZPK-to-SOS projection could silently drop imaginary residues from approximately conjugate (but not truly conjugate) roots, and conversion/analog frequency accepted NaN/Inf. New design guard rejects nonfinite roots/gain/frequency and nonfinite output coefficients; SOS section checks polynomial imaginary residues before projecting to real; adversarial malformed ZPK, conjugate mismatch and valid-identity tests added to iir_domains pending next CI."
+    },
+    {
+      "id": "website",
+      "status": "PASS_FOURTEEN_SUITE_MEASURED_ARTIFACT",
+      "evidence": "Feature commit bc344e8475a96503d7dc4678805280190ff1f322 pins report a8db0cbbb78f-1873d453-6ae773968c56a254 and exact GitHub measured artifact SHA256 68f30f984b683c8cf22031f18cf592fcbdc789568b21d361ac0865e7ccad43bd; 236 precision-aware rows / 2124 raw timing samples. GitHub Actions run 42222522016 SUCCESS: Astro 0 errors/0 warnings, 3/3 provenance tests, build, smoke 23 static+1 proxied. No claim of data for unverified current source."
+    },
+    {
+      "id": "reproducibility",
+      "status": "PENDING",
+      "evidence": "No independent cross-platform/compiler or external FFTW/SciPy benchmarks. WSL single-machine, single-compiler run only."
+    }
+  ],
+  "not_verified": [
+    "New finite ZPK validation, strict real SOS polynomial coefficient checks and malformed conjugate/NaN/Inf input tests are committed AFTER verified source a8db0cb; require another 14/14 Release and 14/14 ASan/UBSan CI with assertions enabled",
+    "Measured benchmark artifact and website apply only to verified source a8db0cb; no benchmark evidence yet for current post-ZPK source changes, next run must publish 236 native binary32/binary64 cases and 2124 raw timing samples",
+    "Extreme high-order Bessel/elliptic and near-unit IIR condition numbers, full exceptional-input contracts, multi-precision high-accuracy reference methods and formal stability/accuracy bounds remain unverified",
+    "FFTW/SciPy or competing DSP baselines, cross-compiler/ISA/platform validation, thermal/frequency control, independent multi-machine replication and memory throughput remain unmeasured"
+  ],
+  "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
+  "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
+  "next": "Next laptop Local CI must compile new ZPK invalid-domain fixtures, run expected 14/14 Release -UNDEBUG and 14/14 ASan/UBSan and review any previously accepted malformed conjugate case without weakening thresholds. Verify all 236 precision-specific FFT/convolution/DCT/FIR timings and 9 samples per case on pinned source, parser tests; update website only with new GitHub measurements if warranted. Remain ACTIVE until numerical/reproducibility limitations explicitly reviewed.",
+  "current_verified_ci": {
+    "status": "PASS",
+    "run_id": "a8db0cbbb78f-1873d453-6ae773968c56a254",
+    "source_sha": "a8db0cbbb78fcef4cdba30457abc54696a44b9f7",
+    "config_sha": "1873d453ccf98ce9e38582ea70b25c303c25b9da",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/a8db0cbbb78f-1873d453-6ae773968c56a254",
+    "release_ctest": 14,
+    "asan_ubsan_ctest": 14,
+    "assertions_enabled": true,
+    "bench_cases": 236,
+    "bench_cases_per_precision": 118,
+    "raw_samples": 2124,
+    "benchmark_precisions": [
+      "binary32",
+      "binary64"
+    ],
+    "compiler": "GCC 13.3.0",
+    "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
+    "benchmark_source_sha256": "85a3c51d593800ec2c7fc137aeee1bc2f86701c04cf999d66a6bf0fef73a4198",
+    "benchmark_artifact_sha256": "68f30f984b683c8cf22031f18cf592fcbdc789568b21d361ac0865e7ccad43bd"
+  },
+  "previous_failed_ci": {
+    "status": "FAIL",
+    "run_id": "586e4b52f74d-348e2e17-e28b3d2a64762719",
+    "tested_sha": "586e4b52f74dc33332ea06d31861e3da0c737646",
+    "stage": "release-numerical-tests",
+    "passed": 8,
+    "total": 9,
+    "diagnosed_case": {
+      "precision": "float32",
+      "algorithm": "direct",
+      "n": 256,
+      "pattern": "dc",
+      "seed": 2974,
+      "frequency_bin": 224,
+      "observed_abs_error": 0.0012341570527194862,
+      "original_bound": 0.0008
+    },
+    "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
+  },
+  "website_commit": "bc344e8475a96503d7dc4678805280190ff1f322",
+  "coordinator_pending_commit": null,
+  "website_verification": {
+    "status": "PASS",
+    "run_id": 42222522016,
+    "workflow": "Bouncing Balls verification",
+    "tested_sha": "bc344e8475a96503d7dc4678805280190ff1f322",
+    "tests": "Astro check 0 errors and warnings; benchmark provenance tests 3/3; full build and smoke 23 static + 1 proxied routes passed",
+    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42222522016"
+  },
+  "last_resolved_failed_ci": {
+    "status": "FAIL",
+    "run_id": "d066ee6d0865-0d022547-ec5d160c55a751b2",
+    "tested_sha": "d066ee6d0865b7043a0b214ad384caa25a236930",
+    "config_sha": "0d0225476dcb1af85a2bf3c6dc730f3a82ae3f94",
+    "stage": "release-numerical-tests",
+    "failure_kind": "compile_error",
+    "diagnostic": "tests/iir_oracles.cpp:184 ambiguous BiquadTransposedDirectFormII<T> brace-list construction; use explicit BiquadCoefficients<T> aggregate",
+    "release_ctest": "not executed; compilation failed",
+    "sanitizer_ctest": "not executed",
+    "benchmark": "not executed",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/d066ee6d0865-0d022547-ec5d160c55a751b2",
+    "resolved_in_verified_run": "6e1862fba245-acfb166f-969900ae365f85eb"
+  },
+  "last_duplicate_run": {
+    "run_id": "51c9e29045ce-e1d417be-ee89ec682ae2af39",
+    "source_sha": "51c9e29045ce5891b77e0dc7dc1f9454a03095a0",
+    "benchmark_source_same": true,
+    "compiler_flags_same": true,
+    "performance_difference": "236/236 medians different on latest report despite identical code/compiler flags and same machine; website intentionally pins the earlier valid artifact; no claimed speedup or slowdown."
+  }
+}

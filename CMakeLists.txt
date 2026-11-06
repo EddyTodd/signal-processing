@@ -11,10 +11,10 @@ option(SIGNAL_PROCESSING_BUILD_TESTS "Build correctness tests" ${PROJECT_IS_TOP_
 function(signal_processing_configure_test target)
     target_link_libraries(${target} PRIVATE signal_processing::signal_processing)
     if(MSVC)
-        target_compile_options(${target} PRIVATE /W4 /permissive-)
+        target_compile_options(${target} PRIVATE /W4 /permissive- /UNDEBUG)
     else()
         target_compile_options(${target} PRIVATE
-            -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wdouble-promotion -Wold-style-cast)
+            -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wdouble-promotion -Wold-style-cast -UNDEBUG)
     endif()
 endfunction()
 
@@ -46,7 +46,40 @@ if(SIGNAL_PROCESSING_BUILD_TESTS)
     signal_processing_configure_test(signal_processing_iir)
     add_test(NAME signal_processing_iir COMMAND signal_processing_iir)
 
+    add_executable(signal_processing_iir_oracles tests/iir_oracles.cpp)
+    signal_processing_configure_test(signal_processing_iir_oracles)
+    add_test(NAME signal_processing_iir_oracles COMMAND signal_processing_iir_oracles)
+
     add_executable(signal_processing_spectral tests/spectral.cpp)
     signal_processing_configure_test(signal_processing_spectral)
     add_test(NAME signal_processing_spectral COMMAND signal_processing_spectral)
+
+    add_executable(signal_processing_dct_fir_oracles tests/dct_fir_oracles.cpp)
+    signal_processing_configure_test(signal_processing_dct_fir_oracles)
+    add_test(NAME signal_processing_dct_fir_oracles
+             COMMAND signal_processing_dct_fir_oracles)
+
+    add_executable(signal_processing_spectral_oracles tests/spectral_oracles.cpp)
+    signal_processing_configure_test(signal_processing_spectral_oracles)
+    add_test(NAME signal_processing_spectral_oracles
+             COMMAND signal_processing_spectral_oracles)
+
+    add_executable(signal_processing_iir_domains tests/iir_domains.cpp)
+    signal_processing_configure_test(signal_processing_iir_domains)
+    add_test(NAME signal_processing_iir_domains
+             COMMAND signal_processing_iir_domains)
+
+    add_executable(signal_processing_convolution_oracles tests/convolution_oracles.cpp)
+    signal_processing_configure_test(signal_processing_convolution_oracles)
+    add_test(NAME signal_processing_convolution_oracles
+             COMMAND signal_processing_convolution_oracles)
+
+    add_executable(signal_processing_numerical_contracts tests/numerical_contracts.cpp)
+    signal_processing_configure_test(signal_processing_numerical_contracts)
+    add_test(NAME signal_processing_numerical_contracts COMMAND signal_processing_numerical_contracts)
+
+    add_executable(signal_processing_numerical_precision tests/numerical_precision.cpp)
+    signal_processing_configure_test(signal_processing_numerical_precision)
+    add_test(NAME signal_processing_numerical_precision
+             COMMAND signal_processing_numerical_precision)
 endif()

@@ -5,7 +5,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <complex>
 #include <cstddef>
+#include <limits>
+#include <stdexcept>
 #include <span>
 #include <vector>
 
@@ -13,29 +16,75 @@ namespace signal_processing::correlation {
 
 namespace detail {
 
+// Range energies must not use prefix[right] - prefix[left]:
+// cancellation can erase a weak signal at the end of a loud stream.
+// A pairwise range-sum tree evaluates only samples inside the overlap,
+// with O(N) storage and O(log N) per correlation lag.
 template <signal_processing::detail::Sample T>
-[[nodiscard]] std::vector<signal_processing::detail::scalar_t<T>> energy_prefix(
-    std::span<const T> input) {
-    using Scalar = signal_processing::detail::scalar_t<T>;
-    std::vector<Scalar> prefix(input.size() + 1, Scalar{});
-    for (std::size_t i = 0; i < input.size(); ++i)
-        prefix[i + 1] = prefix[i] + signal_processing::detail::magnitude_squared(input[i]);
-    return prefix;
-}
+class EnergyTree {
+public:
+    explicit EnergyTree(std::span<const T> input)
+        : count_(input.size()), sums_(checked_capacity(count_), 0.L) {
+        for (std::size_t i = 0; i < count_; ++i) {
+            if constexpr (signal_processing::detail::SampleTraits<T>::is_complex) {
+                const auto real = static_cast<long double>(input[i].real());
+                const auto imag = static_cast<long double>(input[i].imag());
+                sums_[count_ + i] = real * real + imag * imag;
+            } else {
+                const auto value = static_cast<long double>(input[i]);
+                sums_[count_ + i] = value * value;
+            }
+        }
+        for (std::size_t i = count_; i > 1; --i)
+            sums_[i - 1] = sums_[2 * (i - 1)] + sums_[2 * (i - 1) + 1];
+    }
 
-template <fft::Scalar T>
-[[nodiscard]] inline T range_sum(const std::vector<T>& prefix, std::size_t first,
-                                 std::size_t last_exclusive) {
-    return prefix[last_exclusive] - prefix[first];
-}
+    [[nodiscard]] long double sum(std::size_t first, std::size_t last) const {
+        // The caller computes mathematically valid overlapping intervals.
+        long double result{};
+        first += count_;
+        last += count_;
+        while (first < last) {
+            if ((first & 1U) != 0U) result += sums_[first++];
+            if ((last & 1U) != 0U) result += sums_[--last];
+            first >>= 1U;
+            last >>= 1U;
+        }
+        return result;
+    }
+
+private:
+    [[nodiscard]] static std::size_t checked_capacity(std::size_t count) {
+        if (count > std::numeric_limits<std::size_t>::max() / 2)
+            throw std::length_error("normalized correlation energy workspace overflows");
+        return 2 * count;
+    }
+
+    std::size_t count_{};
+    std::vector<long double> sums_;
+};
 
 template <signal_processing::detail::Sample T>
 [[nodiscard]] std::vector<T> normalize(std::span<const T> lhs, std::span<const T> rhs,
-                                       std::span<const T> raw) {
-    using Scalar = signal_processing::detail::scalar_t<T>;
-    const auto lhs_prefix = energy_prefix<T>(lhs);
-    const auto rhs_prefix = energy_prefix<T>(rhs);
+                                       std::span<const T> raw, bool from_fft = false) {
     std::vector<T> output(raw.size(), T{});
+    if (raw.empty()) return output;
+    const EnergyTree<T> lhs_energy(lhs);
+    const EnergyTree<T> rhs_energy(rhs);
+    using Scalar = signal_processing::detail::scalar_t<T>;
+    // FFT convolution has a nonzero absolute roundoff floor: a tiny
+    // overlap can give a large *relative* normalized error even though
+    // the unnormalized Fourier result satisfies a normal absolute bound.
+    // Directly recompute only ill-conditioned overlaps in long double.
+    const long double total_energy_scale =
+        std::sqrt(lhs_energy.sum(0, lhs.size())) *
+        std::sqrt(rhs_energy.sum(0, rhs.size()));
+    const long double fft_roundoff_floor =
+        from_fft ? 4096.L *
+            static_cast<long double>(std::numeric_limits<Scalar>::epsilon()) *
+            (2.L + std::log2(1.L + static_cast<long double>(
+                std::max(lhs.size(), rhs.size())))) * total_energy_scale
+            : 0.L;
     const auto lhs_size = static_cast<std::ptrdiff_t>(lhs.size());
     const auto rhs_size = static_cast<std::ptrdiff_t>(rhs.size());
 
@@ -46,12 +95,62 @@ template <signal_processing::detail::Sample T>
         if (i_first >= i_last) continue;
         const auto j_first = i_first - lag;
         const auto j_last = i_last - lag;
-        const Scalar lhs_energy = range_sum(lhs_prefix, static_cast<std::size_t>(i_first),
-                                            static_cast<std::size_t>(i_last));
-        const Scalar rhs_energy = range_sum(rhs_prefix, static_cast<std::size_t>(j_first),
-                                            static_cast<std::size_t>(j_last));
-        const Scalar denominator = std::sqrt(lhs_energy * rhs_energy);
-        if (denominator != Scalar{}) output[index] = raw[index] / denominator;
+        const long double left = lhs_energy.sum(static_cast<std::size_t>(i_first),
+                                                static_cast<std::size_t>(i_last));
+        const long double right = rhs_energy.sum(static_cast<std::size_t>(j_first),
+                                                 static_cast<std::size_t>(j_last));
+        // Compute square roots separately to reduce product overflow.
+        const long double denominator = std::sqrt(left) * std::sqrt(right);
+        if (!(denominator > 0.L)) continue; // Zero-energy overlap maps to zero.
+        // Cross-correlation accumulates in the public scalar format, so
+        // products can underflow to zero or overflow to infinity even
+        // when the *normalized* result has magnitude <= 1. Guard both
+        // direct and FFT paths, not only ill-conditioned FFT overlaps.
+        const bool raw_finite = [&]() {
+            if constexpr (signal_processing::detail::SampleTraits<T>::is_complex)
+                return std::isfinite(raw[index].real()) &&
+                       std::isfinite(raw[index].imag());
+            else
+                return std::isfinite(raw[index]);
+        }();
+        const bool scalar_range_lost =
+            denominator < static_cast<long double>(std::numeric_limits<Scalar>::min()) ||
+            denominator > static_cast<long double>(std::numeric_limits<Scalar>::max());
+        if (!raw_finite || scalar_range_lost ||
+            (from_fft && denominator <= fft_roundoff_floor)) {
+            std::complex<long double> numerator{};
+            for (auto i = i_first; i < i_last; ++i) {
+                const auto j = i - lag;
+                const auto x = lhs[static_cast<std::size_t>(i)];
+                const auto y = rhs[static_cast<std::size_t>(j)];
+                if constexpr (signal_processing::detail::SampleTraits<T>::is_complex) {
+                    const std::complex<long double> xl{
+                        static_cast<long double>(x.real()),
+                        static_cast<long double>(x.imag())};
+                    const std::complex<long double> yl{
+                        static_cast<long double>(y.real()),
+                        static_cast<long double>(y.imag())};
+                    numerator += xl * std::conj(yl);
+                } else {
+                    numerator += std::complex<long double>{
+                        static_cast<long double>(x) * static_cast<long double>(y), 0.L};
+                }
+            }
+            if constexpr (signal_processing::detail::SampleTraits<T>::is_complex) {
+                output[index] = T{
+                    static_cast<Scalar>(numerator.real() / denominator),
+                    static_cast<Scalar>(numerator.imag() / denominator)};
+            } else {
+                output[index] = static_cast<T>(numerator.real() / denominator);
+            }
+        } else if constexpr (signal_processing::detail::SampleTraits<T>::is_complex) {
+            output[index] = T{
+                static_cast<Scalar>(static_cast<long double>(raw[index].real()) / denominator),
+                static_cast<Scalar>(static_cast<long double>(raw[index].imag()) / denominator)};
+        } else {
+            output[index] = static_cast<T>(
+                static_cast<long double>(raw[index]) / denominator);
+        }
     }
     return output;
 }
@@ -114,7 +213,7 @@ template <signal_processing::detail::Sample T>
 [[nodiscard]] inline std::vector<T> normalized_fft(std::span<const T> lhs,
                                                     std::span<const T> rhs) {
     const auto raw = cross_fft<T>(lhs, rhs);
-    return detail::normalize<T>(lhs, rhs, raw);
+    return detail::normalize<T>(lhs, rhs, raw, true);
 }
 
 // Compatibility names from the initial milestone; both are direct definitions.

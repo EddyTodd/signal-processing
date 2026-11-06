@@ -166,10 +166,13 @@ The analog prototype is then transformed to low-pass, high-pass, band-pass, or b
 
 These conversions deliberately reject a result whose imaginary residue is too large to be explained by binary32/binary64 roundoff. A malformed or non-conjugate root set therefore does not silently become a real filter.
 
+Caller-supplied ZPK roots and gain must have finite real/imaginary coordinates. Conversion rejects non-finite expanded coefficients or section sums/products; SOS also checks the imaginary residue of each proposed real quadratic, rather than merely testing approximate root-pair distance. Non-finite analog response frequency is rejected. These ZPK/SOS checks are pending independent laptop CI at the next source revision.
+
 ## Numerical conventions
 
 - IIR scalar APIs support binary32 and binary64 only.
 - `a[0]` is normalized once at construction; a zero leading denominator coefficient is invalid.
+- General-form, first-order and biquad constructors reject non-finite initial coefficients and non-finite quotients after normalization; SOS cascades also reject non-finite global gain. Nonzero negative or tiny finite `a[0]` remains valid when all quotients are finite. These checks do not prove stability and do not guard arbitrary runtime sample inputs.
 - Analog prototype functions return finite zeros only; relative degree represents zeros at infinity.
 - Digital critical frequencies are normalized to Nyquist, not sample rate.
 - No filter family, realization, normalization, or SOS/transfer representation is chosen automatically.

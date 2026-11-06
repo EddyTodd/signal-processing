@@ -2,7 +2,7 @@
 
 #include "signal_processing/detail/sample.hpp"
 #include "signal_processing/fft.hpp"
-#include "signal_processing/fft_plans.hpp"
+#include "signal_processing/detail/fft_plans.hpp"
 
 #include <algorithm>
 #include <complex>

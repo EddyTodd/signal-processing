@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <concepts>
 #include <cstddef>
 #include <span>
@@ -25,12 +27,22 @@ struct Coefficients {
 template <Scalar T>
 [[nodiscard]] inline Coefficients<T> normalize(std::vector<T> numerator,
                                                 std::vector<T> denominator) {
-    if (numerator.empty() || denominator.empty() || denominator.front() == T{}) {
+    if (numerator.empty() || denominator.empty() ||
+        denominator.front() == T{}) {
         throw std::invalid_argument("IIR coefficients require non-empty b and non-zero a[0]");
+    }
+    const auto finite = [](T value) { return std::isfinite(value); };
+    if (!std::all_of(numerator.begin(), numerator.end(), finite) ||
+        !std::all_of(denominator.begin(), denominator.end(), finite)) {
+        throw std::invalid_argument("IIR coefficients must be finite");
     }
     const T a0 = denominator.front();
     for (auto& value : numerator) value /= a0;
     for (auto& value : denominator) value /= a0;
+    if (!std::all_of(numerator.begin(), numerator.end(), finite) ||
+        !std::all_of(denominator.begin(), denominator.end(), finite)) {
+        throw std::invalid_argument("IIR normalized coefficients must be finite");
+    }
     return {std::move(numerator), std::move(denominator)};
 }
 
@@ -205,6 +217,13 @@ class FirstOrderTransposedDirectFormII {
 public:
     explicit FirstOrderTransposedDirectFormII(FirstOrderCoefficients<T> c) {
         if (c.a0 == T{}) throw std::invalid_argument("first-order section requires non-zero a0");
+        if (!std::isfinite(c.a0) || !std::isfinite(c.a1) ||
+            !std::isfinite(c.b0) || !std::isfinite(c.b1) ||
+            !std::isfinite(c.b0 / c.a0) ||
+            !std::isfinite(c.b1 / c.a0) ||
+            !std::isfinite(c.a1 / c.a0)) {
+            throw std::invalid_argument("first-order section coefficients must normalize to finite values");
+        }
         b0_ = c.b0 / c.a0;
         b1_ = c.b1 / c.a0;
         a1_ = c.a1 / c.a0;
@@ -234,11 +253,30 @@ struct BiquadCoefficients {
     T a2{};
 };
 
+// Reject non-finite coefficients before they enter stateful recursion,
+// including finite inputs whose quotient by a tiny a0 would overflow.
+template <Scalar T>
+void validate_biquad(BiquadCoefficients<T> c) {
+    if (c.a0 == T{}) throw std::invalid_argument("biquad requires non-zero a0");
+    for (const T value : std::array<T, 6>{c.b0, c.b1, c.b2, c.a0, c.a1, c.a2}) {
+        if (!std::isfinite(value)) {
+            throw std::invalid_argument("biquad coefficients must be finite");
+        }
+    }
+    for (const T value : std::array<T, 5>{
+             c.b0 / c.a0, c.b1 / c.a0, c.b2 / c.a0,
+             c.a1 / c.a0, c.a2 / c.a0}) {
+        if (!std::isfinite(value)) {
+            throw std::invalid_argument("biquad normalized coefficients must be finite");
+        }
+    }
+}
+
 template <Scalar T>
 class BiquadDirectFormI {
 public:
     explicit BiquadDirectFormI(BiquadCoefficients<T> c) {
-        if (c.a0 == T{}) throw std::invalid_argument("biquad requires non-zero a0");
+        validate_biquad(c);
         b0_ = c.b0 / c.a0;
         b1_ = c.b1 / c.a0;
         b2_ = c.b2 / c.a0;
@@ -265,7 +303,7 @@ template <Scalar T>
 class BiquadDirectFormII {
 public:
     explicit BiquadDirectFormII(BiquadCoefficients<T> c) {
-        if (c.a0 == T{}) throw std::invalid_argument("biquad requires non-zero a0");
+        validate_biquad(c);
         b0_ = c.b0 / c.a0;
         b1_ = c.b1 / c.a0;
         b2_ = c.b2 / c.a0;
@@ -294,7 +332,7 @@ public:
         : BiquadTransposedDirectFormII(BiquadCoefficients<T>{b0, b1, b2, a0, a1, a2}) {}
 
     explicit BiquadTransposedDirectFormII(BiquadCoefficients<T> c) {
-        if (c.a0 == T{}) throw std::invalid_argument("biquad requires non-zero a0");
+        validate_biquad(c);
         b0_ = c.b0 / c.a0;
         b1_ = c.b1 / c.a0;
         b2_ = c.b2 / c.a0;
@@ -320,6 +358,9 @@ class SosCascade {
 public:
     explicit SosCascade(std::vector<BiquadCoefficients<T>> sections, T gain = T{1})
         : coefficients_(std::move(sections)), gain_(gain) {
+        if (!std::isfinite(gain_)) {
+            throw std::invalid_argument("SOS cascade gain must be finite");
+        }
         filters_.reserve(coefficients_.size());
         for (const auto& c : coefficients_) filters_.emplace_back(c);
     }
