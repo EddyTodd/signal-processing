@@ -146,6 +146,30 @@ void verify_one_case(L radius, L angle, unsigned pattern) {
     }
 }
 
+// Closed-form independent oracle: H(z)=(1-r)/(1-r z^-1) has impulse
+// response h[n]=(1-r)r^n. Includes negative poles and non-unit a0.
+template <iir::Scalar T>
+void verify_first_order_impulse() {
+    const L tolerance=std::same_as<T,float> ? 1.e-4L : 3.e-12L;
+    for(const L pole:{-0.93L,-0.25L,0.17L,0.87L,0.985L}) {
+        const T r=static_cast<T>(pole);
+        const T b0=T{1}-r;
+        const iir::FirstOrderCoefficients<T> c{
+            T{2}*b0,T{},T{2},-T{2}*r};
+        iir::FirstOrderTransposedDirectFormII<T> first(c);
+        iir::DirectFormI<T> general({b0},{T{1},-r});
+        L expected=static_cast<L>(b0);
+        for(std::size_t n=0;n<384;++n) {
+            const T input=n==0 ? T{1} : T{};
+            close_value(first.process(input),expected,tolerance);
+            close_value(general.process(input),expected,tolerance);
+            expected *= static_cast<L>(r);
+        }
+        first.reset();
+        close_value(first.process(T{1}),static_cast<L>(b0),tolerance);
+    }
+}
+
 template <iir::Scalar T>
 void invalid_domains() {
     bool threw=false;
@@ -178,6 +202,7 @@ void invalid_domains() {
 template <iir::Scalar T>
 void run() {
     invalid_domains<T>();
+    verify_first_order_impulse<T>();
     for(const L radius:{0.05L,0.43L,0.82L,0.985L})
         for(const L angle:{0.13L,0.47L,1.12L,2.37L})
             for(unsigned pattern=0;pattern<4;++pattern)
