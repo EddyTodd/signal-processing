@@ -418,3 +418,61 @@ Local CI:** next report must show **14/14 Release and 14/14 ASan/UBSan**
 with enabled assertions plus a new 236-case campaign. Neither
 independent multi-machine performance evidence nor global
 floating-point accuracy is established.
+
+## Verified finite IIR and fourth-order SOS baseline (2026-11-06)
+
+The pinned source commit `a8db0cbbb78fcef4cdba30457abc54696a44b9f7` and workflow
+`1873d453ccf98ce9e38582ea70b25c303c25b9da` passed all stages in run `a8db0cbbb78f-1873d453-6ae773968c56a254`:
+https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/a8db0cbbb78f-1873d453-6ae773968c56a254
+
+**14/14 Release CTests** and **14/14 ASan/UBSan CTests**
+passed with explicit `-UNDEBUG` assertions, including the
+`signal_processing_iir_domains` invalid-coefficient and normalized
+overflow contract for general, first-order, three biquad realizations and
+SOS, and independent two-section fourth-order `long double` recurrence
+against the rounded float32/float64 public coefficients. The benchmark
+parser self-tests passed. The complete empirical benchmark contains
+**236 cases** (118 float32 + 118 float64) and **2,124 timed samples**,
+nine per case, on the Intel i7-13700KF with GCC 13.3.0 and
+`-O3 -DNDEBUG -std=c++23 -march=native -fno-omit-frame-pointer`.
+The reported 102 CPU ISA flags indicate *availability*, not actual
+per-kernel instruction use. Every case's timing median, interpolated
+p10/p90, median absolute deviation, trial count and same-shape/
+same-precision/same-regime speedup was checked against the real samples.
+Published artifact SHA-256:
+`68f30f984b683c8cf22031f18cf592fcbdc789568b21d361ac0865e7ccad43bd`.
+
+The eddytodd-web feature branch commit
+`bc344e8475a96503d7dc4678805280190ff1f322`
+pins that exact artifact, with accessible charts, filterable precision,
+tabular data and measurement limits. GitHub Actions
+https://github.com/EddyTodd/eddytodd-web/actions/runs/42222522016
+passed Astro static analysis (0 errors/warnings), three data-provenance
+tests, a full build and 23 static + one proxied route smoke validation.
+
+### Pending ZPK and SOS real-coefficient input integrity
+
+The public ZPK representation also permits callers to supply roots and
+gain directly. An audit found that `second_order_sections` paired roots
+within an approximate distance but then **discarded the imaginary part**
+of the resulting quadratic's sum and product without checking its size.
+Two non-conjugate roots close enough to match could therefore become
+an apparently real biquad encoding a different transfer function.
+Separately, non-finite roots/gain in transfer/SOS conversion or
+non-finite analog evaluation frequency could enter calculations and
+return non-finite values silently.
+
+New input validation rejects NaN/Inf ZPK coordinates and gain and
+non-finite analog evaluation frequencies, and rejects non-finite
+expanded transfer coefficients and SOS section coefficients. SOS now
+checks imaginary polynomial residuals against the existing
+`4096 * epsilon` realness criterion before projecting to real
+coefficients; this does not loosen the established polynomial
+threshold. The extended `signal_processing_iir_domains` test checks
+finite exact conjugate pairs, malformed approximate conjugate pairs,
+NaN/Inf roots and gain, invalid analog frequencies and analog
+stability with NaN imaginary poles for both float32 and float64.
+This change is **not yet validated by laptop CI**: repeat all
+**14/14 Release and 14/14 ASan/UBSan** executables and the full
+precision-separated benchmark campaign. No full-space numerical
+proof or external competitive performance comparison is claimed.

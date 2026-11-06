@@ -6,28 +6,28 @@
   "milestones": [
     {
       "id": "numerical-oracle",
-      "status": "PASS_CONV_DCT_FIR_STFT_IIR_FFT_FINITE",
-      "evidence": "Pinned source 51c9e29045ce5891b77e0dc7dc1f9454a03095a0 passed 13/13 Release CTests with -UNDEBUG assertions on 51c9e29045ce-91530d70-58022aa4ada6e37e, including independent long-double real/complex convolution and normalized cross-correlation, FIR, DCT I-IV, stable IIR poles, STFT/PSD/Welch/CSD, FFT cases. Post-verified finite IIR coefficient/normalized overflow guards and fourth-order SOS oracle have not run (14 suites expected)."
+      "status": "PASS_FOURTEEN_FINITE_SUITE",
+      "evidence": "Run a8db0cbbb78f-1873d453-6ae773968c56a254 pinned source a8db0cbbb78fcef4cdba30457abc54696a44b9f7 and coordinator 1873d453ccf98ce9e38582ea70b25c303c25b9da; 14/14 Release CTests with active asserts, including finite IIR coefficient/normalization overflow checks and independent fourth-order long-double SOS oracle, plus long-double FFT, DCT, FIR, convolution, STFT, IIR recurrence oracles. New ZPK/SOS conversion input checks after a8db0cbbb78fcef4cdba30457abc54696a44b9f7 are untested."
     },
     {
       "id": "sanitizers",
-      "status": "PASS_THIRTEEN_SUITE_SANITIZED",
-      "evidence": "Pinned 51c9e29045ce-91530d70-58022aa4ada6e37e confirms all 13/13 ASan and UBSan CTests pass with assertions enabled; new 14th iir_domains target and input validation on source 8cb8b4e47c5be8dea682f0c844c5e0a8692b4574 require next laptop run."
+      "status": "PASS_FOURTEEN_SUITE_ASAN_UBSAN",
+      "evidence": "Run a8db0cbbb78f-1873d453-6ae773968c56a254: 14/14 ASan and UBSan CTest executable passes with -UNDEBUG assertions enabled. New ZPK validation and malformed-conjugate tests added after verified commit require another 14-suite run."
     },
     {
       "id": "microbenchmark",
       "status": "PASS_DUAL_PRECISION_MEASURED",
-      "evidence": "Pinned 51c9e29045ce-91530d70-58022aa4ada6e37e publishes 236 genuine native binary32/binary64 method/shape benchmarks (118 each), nine trials each, 2,124 raw samples and median/p10/p90/MAD on Intel Core i7-13700KF, GCC 13.3.0, -O3 -march=native. Artifacts and baseline ratios independently checked; complete published artifact SHA256 df1caaa0e403a4890f96062560c0f7b29de6996241e42a781cef381e236c8d9b. 102 available CPU ISA flags not proof of executed instructions. Prior run 51c9e29045ce-e1d417be-ee89ec682ae2af39 same source and flags, different 236 medians; do not attribute to performance change."
+      "evidence": "Exact run a8db0cbbb78f-1873d453-6ae773968c56a254 has 236 measured FFT/convolution/DCT/FIR cases (118 independent binary32, 118 binary64); nine real raw samples each, 2124 total with median, p10/p90, MAD validated independently. GCC 13.3.0 -O3 -DNDEBUG -std=c++23 -march=native -fno-omit-frame-pointer, i7-13700KF, 102 available CPU ISA flags; published SHA256 68f30f984b683c8cf22031f18cf592fcbdc789568b21d361ac0865e7ccad43bd. Speedup ratios limited to matched precision, shape, allocation regime. Single-machine and CPU conditions uncontrolled."
     },
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "Normalized correlation EnergyTree and adaptive long-double low-energy FFT lag recomputation passed 13-suite Release/ASan/UBSan. Audit next found nonfinite NaN/Inf IIR coefficients and normalized overflow were accepted by general/biquad/first-order/section constructors; now guarded before state allocation. Adds iir_domains independent fourth-order SOS two-pole-pair textbook long-double recurrence and invalid-domain regression with no widened numerical tolerances. Awaiting next 14-suite CI."
+      "evidence": "14-suite run verified finite IIR general/first-order/biquad/SOS constructors and fourth-order SOS recurrence. Found subsequent ZPK-to-SOS projection could silently drop imaginary residues from approximately conjugate (but not truly conjugate) roots, and conversion/analog frequency accepted NaN/Inf. New design guard rejects nonfinite roots/gain/frequency and nonfinite output coefficients; SOS section checks polynomial imaginary residues before projecting to real; adversarial malformed ZPK, conjugate mismatch and valid-identity tests added to iir_domains pending next CI."
     },
     {
       "id": "website",
-      "status": "PASS_PINNED_THIRTEEN_SUITE",
-      "evidence": "Website feature commit 95937f6a55c45453b2795b7e7e95537a99838fa5 uses measured source 51c9e29045ce5891b77e0dc7dc1f9454a03095a0 earlier report 51c9e29045ce-e1d417be-ee89ec682ae2af39, published artifact SHA256 3629e2a6971f8b01746d210014041d9386886a004799f9380e20c4cd10a991b1, 236 precision-separated cases and 2124 actual samples. GitHub Actions verification 42176097144 PASS: Astro 0 errors/0 warnings, 3/3 benchmark provenance tests, full build and 23-static+1-proxied-route smoke. New same-source benchmark run is separately reviewed, not fabricated/aggregated into website."
+      "status": "PASS_FOURTEEN_SUITE_MEASURED_ARTIFACT",
+      "evidence": "Feature commit bc344e8475a96503d7dc4678805280190ff1f322 pins report a8db0cbbb78f-1873d453-6ae773968c56a254 and exact GitHub measured artifact SHA256 68f30f984b683c8cf22031f18cf592fcbdc789568b21d361ac0865e7ccad43bd; 236 precision-aware rows / 2124 raw timing samples. GitHub Actions run 42222522016 SUCCESS: Astro 0 errors/0 warnings, 3/3 provenance tests, build, smoke 23 static+1 proxied. No claim of data for unverified current source."
     },
     {
       "id": "reproducibility",
@@ -36,22 +36,22 @@
     }
   ],
   "not_verified": [
-    "New iir_domains CTest target and added general/first-order/biquad/SOS nonfinite coefficient rejection plus normalized-overflow guards on source 8cb8b4 have not run; must verify expected 14/14 Release and 14/14 ASan/UBSan with assertions enabled and inspect potential IIR_DOMAIN_ORACLE_FAILURE",
-    "Latest 236-case benchmarking and parser tests are for source 51c9e29; current IIR source changes have not been rerun in laptop Local CI and website must not claim results for unverified current source",
-    "High-order IIR conditioning with poles extremely close to the unit circle, high dynamic range/exotic inputs, exceptional-input domain across other DSP APIs, formal global stability/error bounds remain unverified",
-    "External FFTW/SciPy and other library baselines, alternative compiler/ISA/platform, memory throughput, controlled thermal/frequency state, and independent multi-machine replication remain unmeasured"
+    "New finite ZPK validation, strict real SOS polynomial coefficient checks and malformed conjugate/NaN/Inf input tests are committed AFTER verified source a8db0cb; require another 14/14 Release and 14/14 ASan/UBSan CI with assertions enabled",
+    "Measured benchmark artifact and website apply only to verified source a8db0cb; no benchmark evidence yet for current post-ZPK source changes, next run must publish 236 native binary32/binary64 cases and 2124 raw timing samples",
+    "Extreme high-order Bessel/elliptic and near-unit IIR condition numbers, full exceptional-input contracts, multi-precision high-accuracy reference methods and formal stability/accuracy bounds remain unverified",
+    "FFTW/SciPy or competing DSP baselines, cross-compiler/ISA/platform validation, thermal/frequency control, independent multi-machine replication and memory throughput remain unmeasured"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Next laptop worker must compile source with iir_domains and finite IIR coefficient guards, execute 14/14 Release -UNDEBUG and 14/14 ASan/UBSan CTests; inspect any build or numerical failures without relaxing bounds; run 236-case dual-precision nine-sample microbenchmark and parser checks; review exact published next report before attributing any website measurement. Keep ACTIVE.",
+  "next": "Next laptop Local CI must compile new ZPK invalid-domain fixtures, run expected 14/14 Release -UNDEBUG and 14/14 ASan/UBSan and review any previously accepted malformed conjugate case without weakening thresholds. Verify all 236 precision-specific FFT/convolution/DCT/FIR timings and 9 samples per case on pinned source, parser tests; update website only with new GitHub measurements if warranted. Remain ACTIVE until numerical/reproducibility limitations explicitly reviewed.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "51c9e29045ce-91530d70-58022aa4ada6e37e",
-    "source_sha": "51c9e29045ce5891b77e0dc7dc1f9454a03095a0",
-    "config_sha": "91530d7083be5ce2dd819f40295518494fbd1063",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/51c9e29045ce-91530d70-58022aa4ada6e37e",
-    "release_ctest": 13,
-    "asan_ubsan_ctest": 13,
+    "run_id": "a8db0cbbb78f-1873d453-6ae773968c56a254",
+    "source_sha": "a8db0cbbb78fcef4cdba30457abc54696a44b9f7",
+    "config_sha": "1873d453ccf98ce9e38582ea70b25c303c25b9da",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/a8db0cbbb78f-1873d453-6ae773968c56a254",
+    "release_ctest": 14,
+    "asan_ubsan_ctest": 14,
     "assertions_enabled": true,
     "bench_cases": 236,
     "bench_cases_per_precision": 118,
@@ -63,7 +63,7 @@
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
     "benchmark_source_sha256": "85a3c51d593800ec2c7fc137aeee1bc2f86701c04cf999d66a6bf0fef73a4198",
-    "benchmark_artifact_sha256": "df1caaa0e403a4890f96062560c0f7b29de6996241e42a781cef381e236c8d9b"
+    "benchmark_artifact_sha256": "68f30f984b683c8cf22031f18cf592fcbdc789568b21d361ac0865e7ccad43bd"
   },
   "previous_failed_ci": {
     "status": "FAIL",
@@ -84,15 +84,15 @@
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
-  "website_commit": "95937f6a55c45453b2795b7e7e95537a99838fa5",
+  "website_commit": "bc344e8475a96503d7dc4678805280190ff1f322",
   "coordinator_pending_commit": null,
   "website_verification": {
     "status": "PASS",
-    "run_id": 42176097144,
+    "run_id": 42222522016,
     "workflow": "Bouncing Balls verification",
-    "tested_sha": "95937f6a55c45453b2795b7e7e95537a99838fa5",
-    "tests": "Astro check 0 errors and warnings; benchmark provenance 3/3; full build and smoke 23 static routes plus 1 proxied route passed",
-    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42176097144"
+    "tested_sha": "bc344e8475a96503d7dc4678805280190ff1f322",
+    "tests": "Astro check 0 errors and warnings; benchmark provenance tests 3/3; full build and smoke 23 static + 1 proxied routes passed",
+    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42222522016"
   },
   "last_resolved_failed_ci": {
     "status": "FAIL",

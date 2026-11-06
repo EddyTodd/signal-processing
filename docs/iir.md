@@ -166,6 +166,8 @@ The analog prototype is then transformed to low-pass, high-pass, band-pass, or b
 
 These conversions deliberately reject a result whose imaginary residue is too large to be explained by binary32/binary64 roundoff. A malformed or non-conjugate root set therefore does not silently become a real filter.
 
+Caller-supplied ZPK roots and gain must have finite real/imaginary coordinates. Conversion rejects non-finite expanded coefficients or section sums/products; SOS also checks the imaginary residue of each proposed real quadratic, rather than merely testing approximate root-pair distance. Non-finite analog response frequency is rejected. These ZPK/SOS checks are pending independent laptop CI at the next source revision.
+
 ## Numerical conventions
 
 - IIR scalar APIs support binary32 and binary64 only.
