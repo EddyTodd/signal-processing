@@ -294,3 +294,63 @@ The corresponding adversarial tests preserve the existing finite
 coefficient numerical bounds. These changes have **not** passed new
 Local CI yet: the next gate requires **12/12 Release** and **12/12
 ASan/UBSan** executables and fresh reproducible timing artifacts.
+
+## Second verified 12-suite campaign and correlation research extension
+
+The latest pinned **same-source** report for
+`589f871c8818f0db415e3b31f1d768659457a5e7` is
+https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/589f871c8818-afcb45f8-e5cb735bcbc66647
+using coordinator `afcb45f8360ba5f11b8746d14f2563396f0197d3`. It passed
+**12/12 Release** and **12/12 AddressSanitizer/UndefinedBehaviorSanitizer**
+CTest executables, all with C assertions explicitly enabled, covering
+the new long-double DCT/FIR regression suite and finite-input symmetry
+contracts. The benchmark parser also passed. A full measured
+**236-case** campaign was published (118 separately instantiated
+binary32 + 118 binary64, each with nine raw timing samples for 2,124
+total), i7-13700KF, GCC 13.3.0, `-O3 -march=native`, 102
+CPU ISA capability flags, empirical median/p10/p90/MAD and matched
+precision, shape and regime comparison rules. Artifact SHA-256:
+`f72eba1712f8ef24c5da9e2bdd5b9a272f3ec7aecd259895b7cad30a4ade505c`.
+The preceding report `589f871c8818-f4fee9dc-28e2506369435d61` used identical
+source/benchmark build/compiler settings and passed the same gates,
+but **all 236 timing medians differed** between machine runs. Timing
+changes cannot establish an algorithm-level speedup or regression.
+
+Website feature commit
+`1a2ef1847f68e0c4bd6aca5517e8533b23e53c00` displays the
+*previous* 12-suite artifact from `589f871c8818-f4fee9dc-28e2506369435d61`,
+with genuine data, precision filtering, matched speedups and accessible
+row-header semantics. It passed Astro checks (0 errors, 0 warnings),
+three provenance tests, site build and smoke in
+https://github.com/EddyTodd/eddytodd-web/actions/runs/42174428215.
+The later same-source performance run is documented separately;
+there is no aggregation, invented measurement or unsupported speedup
+claim.
+
+### Pending per-lag energy stability and convolution oracle
+
+Audit found per-lag normalized correlation calculated overlap energy
+from the difference of two large scalar running prefix sums. For a
+single tiny trailing sample after a large sample, the difference can
+round to zero even though the overlap has positive energy; the result
+is incorrectly normalized to zero. A new `EnergyTree` uses pairwise
+long-double summation *only* over the requested overlap range.
+For FFT-based normalized correlation, the raw FFT cross-spectrum has
+an absolute roundoff floor that can overwhelm a very weak overlap;
+the implementation now adaptively recomputes affected lag numerators
+by direct long-double products. The fallback is only for ill-conditioned
+overlaps, and its threshold scales with the input energy and format
+epsilon. It preserves the old non-FFT direct catalog API.
+
+The new `signal_processing_convolution_oracles` independent CTest
+uses long-double mathematical convolution/correlation references for
+real and complex binary32/binary64 across empty, impulse, short, odd,
+multi-block and sparse-tail inputs. It covers direct/FFT/circular
+related paths, overlap-add, overlap-save, partitioned and streaming
+flush/reset; invalid block sizes and weak normalized correlation
+edges have explicit assertions and specimen diagnostics.
+**These changes are unverified**, and the next laptop CI should
+run **13/13 Release** and **13/13 ASan/UBSan** CTest executables,
+then the full measured binary32/binary64 benchmark campaign.
+No global mathematical guarantee, external performance baseline,
+or all-input exceptional-value contract is claimed.
