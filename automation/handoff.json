@@ -2,7 +2,7 @@
   "schema": 1,
   "state": "READY_TO_CONTINUE",
   "task_id": "signal-processing",
-  "work_sha": "b7cefaea3526d73424a665bf85ec2d3435f1372b",
-  "responds_to_run_id": "dd299dacc2a4-bdccb989-1d39f279acb77f33",
-  "purpose": "Run actual WSL signal_processing Release/ASan-UBSan tests for newly added independent long-double-oracle float32/float64 FFT forward/inverse numerical precision suite, inspect any failures and exact run artifacts, and repair algorithms or test assumptions based on evidence. Prior source dd299dacc2a4 passed 8/8 Release and 8/8 sanitizer suites and 118 nine-trial binary64 benchmarks; measured data published in eddytodd-web PR #17 with green website CI. Continue broader numerical edge-case/IIR/spectral and external performance validation; do not mark COMPLETE without proof."
+  "work_sha": "1965f20e7e45e05fb1e07cc72fce362569e24f8d",
+  "responds_to_run_id": "5e8707acd4b8-358bd155-9b69a8ab6020425d",
+  "purpose": "Verify expanded 24-size multi-seed float32/float64 independent long-double forward/inverse FFT numerical suite. Previous exact 9/9 Release and 9/9 ASan/UBSan CTests plus 118 measured benchmark cases all PASS. Review exact next CI report and iteratively strengthen independent IIR/spectral and cross-compiler or third-party performance evidence without claiming world-leading performance prematurely."
 }
