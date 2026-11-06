@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <limits>
+#include <stdexcept>
 #include <span>
 #include <vector>
 
@@ -13,29 +15,61 @@ namespace signal_processing::correlation {
 
 namespace detail {
 
+// Range energies must not use prefix[right] - prefix[left]:
+// cancellation can erase a weak signal at the end of a loud stream.
+// A pairwise range-sum tree evaluates only samples inside the overlap,
+// with O(N) storage and O(log N) per correlation lag.
 template <signal_processing::detail::Sample T>
-[[nodiscard]] std::vector<signal_processing::detail::scalar_t<T>> energy_prefix(
-    std::span<const T> input) {
-    using Scalar = signal_processing::detail::scalar_t<T>;
-    std::vector<Scalar> prefix(input.size() + 1, Scalar{});
-    for (std::size_t i = 0; i < input.size(); ++i)
-        prefix[i + 1] = prefix[i] + signal_processing::detail::magnitude_squared(input[i]);
-    return prefix;
-}
+class EnergyTree {
+public:
+    explicit EnergyTree(std::span<const T> input)
+        : count_(input.size()), sums_(checked_capacity(count_), 0.L) {
+        for (std::size_t i = 0; i < count_; ++i) {
+            if constexpr (signal_processing::detail::SampleTraits<T>::is_complex) {
+                const auto real = static_cast<long double>(input[i].real());
+                const auto imag = static_cast<long double>(input[i].imag());
+                sums_[count_ + i] = real * real + imag * imag;
+            } else {
+                const auto value = static_cast<long double>(input[i]);
+                sums_[count_ + i] = value * value;
+            }
+        }
+        for (std::size_t i = count_; i > 1; --i)
+            sums_[i - 1] = sums_[2 * (i - 1)] + sums_[2 * (i - 1) + 1];
+    }
 
-template <fft::Scalar T>
-[[nodiscard]] inline T range_sum(const std::vector<T>& prefix, std::size_t first,
-                                 std::size_t last_exclusive) {
-    return prefix[last_exclusive] - prefix[first];
-}
+    [[nodiscard]] long double sum(std::size_t first, std::size_t last) const {
+        // The caller computes mathematically valid overlapping intervals.
+        long double result{};
+        first += count_;
+        last += count_;
+        while (first < last) {
+            if ((first & 1U) != 0U) result += sums_[first++];
+            if ((last & 1U) != 0U) result += sums_[--last];
+            first >>= 1U;
+            last >>= 1U;
+        }
+        return result;
+    }
+
+private:
+    [[nodiscard]] static std::size_t checked_capacity(std::size_t count) {
+        if (count > std::numeric_limits<std::size_t>::max() / 2)
+            throw std::length_error("normalized correlation energy workspace overflows");
+        return 2 * count;
+    }
+
+    std::size_t count_{};
+    std::vector<long double> sums_;
+};
 
 template <signal_processing::detail::Sample T>
 [[nodiscard]] std::vector<T> normalize(std::span<const T> lhs, std::span<const T> rhs,
                                        std::span<const T> raw) {
-    using Scalar = signal_processing::detail::scalar_t<T>;
-    const auto lhs_prefix = energy_prefix<T>(lhs);
-    const auto rhs_prefix = energy_prefix<T>(rhs);
     std::vector<T> output(raw.size(), T{});
+    if (raw.empty()) return output;
+    const EnergyTree<T> lhs_energy(lhs);
+    const EnergyTree<T> rhs_energy(rhs);
     const auto lhs_size = static_cast<std::ptrdiff_t>(lhs.size());
     const auto rhs_size = static_cast<std::ptrdiff_t>(rhs.size());
 
@@ -46,12 +80,22 @@ template <signal_processing::detail::Sample T>
         if (i_first >= i_last) continue;
         const auto j_first = i_first - lag;
         const auto j_last = i_last - lag;
-        const Scalar lhs_energy = range_sum(lhs_prefix, static_cast<std::size_t>(i_first),
-                                            static_cast<std::size_t>(i_last));
-        const Scalar rhs_energy = range_sum(rhs_prefix, static_cast<std::size_t>(j_first),
-                                            static_cast<std::size_t>(j_last));
-        const Scalar denominator = std::sqrt(lhs_energy * rhs_energy);
-        if (denominator != Scalar{}) output[index] = raw[index] / denominator;
+        const long double left = lhs_energy.sum(static_cast<std::size_t>(i_first),
+                                                static_cast<std::size_t>(i_last));
+        const long double right = rhs_energy.sum(static_cast<std::size_t>(j_first),
+                                                 static_cast<std::size_t>(j_last));
+        // Compute square roots separately to reduce product overflow.
+        const long double denominator = std::sqrt(left) * std::sqrt(right);
+        if (!(denominator > 0.L)) continue; // Zero-energy overlap maps to zero.
+        if constexpr (signal_processing::detail::SampleTraits<T>::is_complex) {
+            using Scalar = signal_processing::detail::scalar_t<T>;
+            output[index] = T{
+                static_cast<Scalar>(static_cast<long double>(raw[index].real()) / denominator),
+                static_cast<Scalar>(static_cast<long double>(raw[index].imag()) / denominator)};
+        } else {
+            output[index] = static_cast<T>(
+                static_cast<long double>(raw[index]) / denominator);
+        }
     }
     return output;
 }
