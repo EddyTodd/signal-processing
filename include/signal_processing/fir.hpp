@@ -56,6 +56,23 @@ template <signal_processing::detail::Sample T>
     return output;
 }
 
+namespace detail {
+
+// Evaluate |a +/- b| / (1 + max(|a|, |b|)) without overflowing
+// the intermediate difference, addition, or tolerance-scaled bound.
+// All callers first reject non-finite coefficients.
+template <fft::Scalar T>
+[[nodiscard]] T relative_pair_mismatch(T a, T b, bool antisymmetric) noexcept {
+    const T largest = std::max(std::abs(a), std::abs(b));
+    const T scale = std::max(T{1}, largest);
+    const T lhs = a / scale;
+    const T rhs = b / scale;
+    const T mismatch = std::abs(antisymmetric ? lhs + rhs : lhs - rhs);
+    return mismatch / (T{1} / scale + largest / scale);
+}
+
+}  // namespace detail
+
 template <fft::Scalar T>
 [[nodiscard]] inline bool symmetric_coefficients(std::span<const T> coefficients,
                                                   T tolerance = T{8} *
@@ -70,8 +87,7 @@ template <fft::Scalar T>
     for (std::size_t k = 0; k < coefficients.size() / 2; ++k) {
         const T a = coefficients[k];
         const T b = coefficients[coefficients.size() - 1 - k];
-        const T scale = T{1} + std::max(std::abs(a), std::abs(b));
-        if (std::abs(a - b) > tolerance * scale) return false;
+        if (detail::relative_pair_mismatch<T>(a, b, false) > tolerance) return false;
     }
     return true;
 }
@@ -88,8 +104,7 @@ template <fft::Scalar T>
     for (std::size_t k = 0; k < coefficients.size() / 2; ++k) {
         const T a = coefficients[k];
         const T b = coefficients[coefficients.size() - 1 - k];
-        const T scale = T{1} + std::max(std::abs(a), std::abs(b));
-        if (std::abs(a + b) > tolerance * scale) return false;
+        if (detail::relative_pair_mismatch<T>(a, b, true) > tolerance) return false;
     }
     if ((coefficients.size() & 1U) != 0U &&
         std::abs(coefficients[coefficients.size() / 2]) > tolerance) return false;

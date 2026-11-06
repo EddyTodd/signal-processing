@@ -238,6 +238,50 @@ void verify_symmetry_contracts() {
         catch(const std::invalid_argument&) {threw=true;}
         assert(threw);
     }
+    // The old check formed 1+max(abs(a),abs(b)) and a +/- b in
+    // public precision: for max finite values, both sides overflowed
+    // to infinity, making the erroneous comparison Inf > Inf false.
+    const T max=std::numeric_limits<T>::max();
+    const std::array<T,2> equal_large{max,max};
+    const std::array<T,2> opposite_large{max,-max};
+    const std::array<T,2> unbalanced_large{max,max/T{2}};
+    const std::array<T,2> unbalanced_opposite{max,-max/T{2}};
+    assert(fir::symmetric_coefficients<T>(equal_large));
+    assert(!fir::symmetric_coefficients<T>(opposite_large));
+    assert(fir::antisymmetric_coefficients<T>(opposite_large));
+    assert(!fir::antisymmetric_coefficients<T>(equal_large));
+    assert(!fir::symmetric_coefficients<T>(unbalanced_large));
+    assert(!fir::antisymmetric_coefficients<T>(unbalanced_opposite));
+
+    // A nonnegative user tolerance must not overflow its comparison
+    // product either. The mathematical normalized residual is <= 2.
+    assert(fir::symmetric_coefficients<T>(opposite_large,max));
+    assert(fir::antisymmetric_coefficients<T>(equal_large,max));
+    assert(!fir::symmetric_coefficients<T>(opposite_large,T{}));
+    assert(!fir::antisymmetric_coefficients<T>(equal_large,T{}));
+
+    // Reject a classification error before the optimized path runs.
+    // Zero input deliberately isolates coefficient validation.
+    const std::array<T,2> zeros{T{},T{}};
+    bool symmetry_rejected=false;
+    try {(void)fir::symmetric_direct<T>(zeros,opposite_large);}
+    catch(const std::invalid_argument&) {symmetry_rejected=true;}
+    assert(symmetry_rejected);
+    symmetry_rejected=false;
+    try {(void)fir::antisymmetric_direct<T>(zeros,equal_large);}
+    catch(const std::invalid_argument&) {symmetry_rejected=true;}
+    assert(symmetry_rejected);
+
+    // Underflow and a truly zero residual preserve the normalized
+    // absolute tolerance policy, including exact-tolerance zero.
+    const T tiny=std::numeric_limits<T>::denorm_min();
+    const std::array<T,2> tiny_opposite{tiny,-tiny};
+    assert(!fir::symmetric_coefficients<T>(tiny_opposite,T{}));
+    assert(fir::symmetric_coefficients<T>(tiny_opposite));
+    assert(fir::antisymmetric_coefficients<T>(tiny_opposite,T{}));
+    assert(fir::symmetric_coefficients<T>(equal_large,T{}));
+    assert(fir::antisymmetric_coefficients<T>(opposite_large,T{}));
+
     const std::array<T,5> x{T{1},T{2},T{3},T{4},T{5}};
     const auto ref_sym=fir::direct<T>(x,symmetric);
     const auto ref_asym=fir::direct<T>(x,antisymmetric);
