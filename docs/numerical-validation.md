@@ -238,3 +238,59 @@ check compared the frame-count formula with independent enumeration over
 *not* a Release CTest, sanitizer result or proof for all size_t inputs.
 The new source requires 11/11 Release and 11/11 ASan/UBSan validation
 before reporting the boundary fix as tested.
+
+## Verified sparse-hop STFT and independent spectral oracles (2026-11-06)
+
+Pinned source/handoff `33d867573a6be76e0cfc9b2296b82029d22ce865`, coordinator
+`15329221c616b001e86f4fe08bbfa9e1989c2123`,
+run `33d867573a6b-15329221-e4e57b64052b98af`:
+https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/33d867573a6b-15329221-e4e57b64052b98af
+
+The **11/11 Release** and **11/11 ASan/UBSan** suites passed
+with explicit `-UNDEBUG` assertions, including the new
+`signal_processing_spectral_oracles` executable covering independent
+`long double` direct DFT, real/complex binary32/binary64 STFT and inverse
+weighted overlap, spectral density, Welch, CSD and end padding/hop gaps.
+The sparse-hop STFT synthetic-empty-tail correction is included in the
+tested revision. Finite tests cannot prove all boundary inputs or bounds.
+
+The pinned artifact contains **236 independently compiled**
+method/shape/precision combinations (118 binary32 + 118 binary64), each
+with nine repeated timed samples (**2,124 total**), measured on the
+i7-13700KF with GCC 13.3.0 and `-O3 -march=native`. The reported CPU
+ISA flags indicate availability, not verified instructions used.
+Empirical p10/p90/MAD describe observed variability, not uncertainty
+from repeated independent machines. Artifact SHA-256:
+`4969f0d6fab60db4b99ce20881178d2e92236afcb66cac323423e971f192ba5a`.
+
+The public website feature commit
+`1609463077c842de0869e2ad29373ef1067f51d9`
+references this exact measured GitHub artifact, filters precision,
+does not mix unmatched speedup ratios, and retains accessible table
+headers. Its GitHub Actions run
+https://github.com/EddyTodd/eddytodd-web/actions/runs/42172825404
+passed Astro checks, all three benchmark-provenance tests, full build
+and smoke. The website has **not** benchmarked untested later code.
+
+## Pending DCT/FIR oracle and non-finite symmetry contract
+
+The new `signal_processing_dct_fir_oracles` target independently
+calculates unnormalized DCT-I/II/III/IV with textbook `long double`
+cosine definitions (length zero and one, odd/prime/composite lengths
+through 127, DC/impulse/alternating/oscillatory patterns). Its FIR
+reference computes direct causal convolution with `long double`
+accumulation for real and complex binary32/binary64, checking direct,
+FFT, overlap-save, stateful streaming and reset responses across
+short/empty and multi-block shapes.
+
+An audit found the FIR symmetric/antisymmetric coefficient predicates
+could incorrectly recognize NaN and infinity as valid due to unordered
+floating-point comparisons and unchecked odd central taps; NaN/Inf
+tolerances could also bypass a simple nonnegative guard. The predicates
+now require **finite, nonnegative** tolerances and return false for
+non-finite coefficients; the accelerated FIR paths consequently reject
+those invalid coefficient arrays with `std::invalid_argument`.
+The corresponding adversarial tests preserve the existing finite
+coefficient numerical bounds. These changes have **not** passed new
+Local CI yet: the next gate requires **12/12 Release** and **12/12
+ASan/UBSan** executables and fresh reproducible timing artifacts.
