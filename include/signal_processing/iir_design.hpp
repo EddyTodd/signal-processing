@@ -38,6 +38,21 @@ struct SosDesign {
 
 namespace detail {
 
+// ZPK data can originate from callers, not only from the design routines.
+// NaN/Inf coordinates otherwise defeat imaginary-residue checks and may be
+// silently converted to apparently real SOS coefficients.
+template <Scalar T>
+void require_finite_zpk(const Zpk<T>& zpk) {
+    if (!std::isfinite(zpk.gain))
+        throw std::invalid_argument("ZPK gain must be finite");
+    const auto finite_root = [](Complex<T> root) {
+        return std::isfinite(root.real()) && std::isfinite(root.imag());
+    };
+    if (!std::all_of(zpk.zeros.begin(), zpk.zeros.end(), finite_root) ||
+        !std::all_of(zpk.poles.begin(), zpk.poles.end(), finite_root))
+        throw std::invalid_argument("ZPK roots must have finite real and imaginary parts");
+}
+
 template <Scalar T>
 [[nodiscard]] T pow10m1(T x) {
     return std::expm1(std::numbers::ln10_v<T> * x);
@@ -337,6 +352,21 @@ template <Scalar T>
     const auto zero_product = zeros[0] * zeros[1];
     const auto pole_sum = poles[0] + poles[1];
     const auto pole_product = poles[0] * poles[1];
+    const T tolerance = T{4096} * std::numeric_limits<T>::epsilon();
+    const auto finite_real = [](Complex<T> value) {
+        return std::isfinite(value.real()) && std::isfinite(value.imag());
+    };
+    const auto real_enough = [tolerance](Complex<T> value) {
+        return std::abs(value.imag()) <= tolerance * (T{1} + std::abs(value.real()));
+    };
+    if (!finite_real(zero_sum) || !finite_real(zero_product) ||
+        !finite_real(pole_sum) || !finite_real(pole_product)) {
+        throw std::runtime_error("SOS section coefficients overflowed");
+    }
+    if (!real_enough(zero_sum) || !real_enough(zero_product) ||
+        !real_enough(pole_sum) || !real_enough(pole_product)) {
+        throw std::runtime_error("SOS section is not real; roots are not conjugate pairs");
+    }
     return {T{1}, -zero_sum.real(), zero_product.real(), T{1}, -pole_sum.real(),
             pole_product.real()};
 }
@@ -705,16 +735,20 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] Complex<T> analog_frequency_response(const Zpk<T>& zpk, T angular_frequency) {
-    if (angular_frequency < T{}) {
-        throw std::invalid_argument("analog frequency must be nonnegative");
+    if (!(angular_frequency >= T{}) || !std::isfinite(angular_frequency)) {
+        throw std::invalid_argument("analog frequency must be finite and nonnegative");
     }
+    detail::require_finite_zpk(zpk);
     return detail::analog_response<T>(zpk, Complex<T>{T{}, angular_frequency});
 }
 
 template <Scalar T>
 [[nodiscard]] bool analog_stable(const Zpk<T>& zpk) noexcept {
     return std::all_of(zpk.poles.begin(), zpk.poles.end(),
-                       [](const auto& pole) { return pole.real() < T{}; });
+                       [](const auto& pole) {
+                           return std::isfinite(pole.real()) &&
+                                  std::isfinite(pole.imag()) && pole.real() < T{};
+                       });
 }
 
 template <Scalar T>
@@ -757,6 +791,7 @@ template <Scalar T>
     if (!(normalized_frequency >= T{} && normalized_frequency <= T{1})) {
         throw std::invalid_argument("frequency must be normalized to Nyquist in [0,1]");
     }
+    detail::require_finite_zpk(zpk);
     const Complex<T> z =
         std::exp(Complex<T>{T{}, std::numbers::pi_v<T> * normalized_frequency});
     Complex<T> numerator{zpk.gain, T{}};
@@ -774,6 +809,7 @@ template <Scalar T>
 
 template <Scalar T>
 [[nodiscard]] Coefficients<T> transfer_function(const Zpk<T>& zpk) {
+    detail::require_finite_zpk(zpk);
     if (zpk.zeros.size() != zpk.poles.size()) {
         throw std::invalid_argument("digital transfer conversion requires equal zero/pole degree");
     }
@@ -790,6 +826,8 @@ template <Scalar T>
             throw std::runtime_error("numerator is not real");
         }
         output.numerator[i] = zpk.gain * numerator_complex[i].real();
+        if (!std::isfinite(output.numerator[i]))
+            throw std::runtime_error("numerator coefficient overflowed");
     }
     for (std::size_t i = 0; i < denominator_complex.size(); ++i) {
         if (std::abs(denominator_complex[i].imag()) >
@@ -797,12 +835,15 @@ template <Scalar T>
             throw std::runtime_error("denominator is not real");
         }
         output.denominator[i] = denominator_complex[i].real();
+        if (!std::isfinite(output.denominator[i]))
+            throw std::runtime_error("denominator coefficient overflowed");
     }
     return output;
 }
 
 template <Scalar T>
 [[nodiscard]] SosDesign<T> second_order_sections(const Zpk<T>& zpk) {
+    detail::require_finite_zpk(zpk);
     if (zpk.zeros.size() != zpk.poles.size()) {
         throw std::invalid_argument("SOS conversion requires equal zero/pole degree");
     }

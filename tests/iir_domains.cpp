@@ -5,11 +5,13 @@
 #endif
 
 #include "signal_processing/iir.hpp"
+#include "signal_processing/iir_design.hpp"
 
 #include <array>
 #include <cassert>
 #include <cmath>
 #include <concepts>
+#include <complex>
 #include <cstddef>
 #include <cstdlib>
 #include <iostream>
@@ -95,6 +97,63 @@ void invalid_coefficients() {
 }
 
 template <iir::Scalar T>
+void malformed_zpk_domains() {
+    namespace design = iir::design;
+    using Complex=std::complex<T>;
+    using Zpk=design::Zpk<T>;
+    const T nan=std::numeric_limits<T>::quiet_NaN();
+    const T inf=std::numeric_limits<T>::infinity();
+    const Zpk good{{Complex{T{0.2},T{0.9}},Complex{T{0.2},T{-0.9}}},
+                   {Complex{T{0.3},T{0.4}},Complex{T{0.3},T{-0.4}}},T{1}};
+    // Exact conjugate pairs must remain accepted by both conversion paths.
+    const auto good_sos=design::second_order_sections(good);
+    const auto good_tf=design::transfer_function(good);
+    assert(good_sos.sections.size()==1);
+    assert(good_tf.numerator.size()==3 && good_tf.denominator.size()==3);
+    assert(std::isfinite(good_sos.sections[0].b2));
+    for(const T invalid:{nan,inf,-inf}) {
+        for(unsigned variant=0;variant<5;++variant) {
+            Zpk z=good;
+            if(variant==0)z.gain=invalid;
+            else if(variant==1)z.zeros[0].real(invalid);
+            else if(variant==2)z.zeros[0].imag(invalid);
+            else if(variant==3)z.poles[0].real(invalid);
+            else z.poles[0].imag(invalid);
+            rejects([&]{(void)design::second_order_sections(z);});
+            rejects([&]{(void)design::transfer_function(z);});
+            rejects([&]{(void)design::frequency_response(z,T{0.5});});
+            rejects([&]{(void)design::analog_frequency_response(z,T{1});});
+        }
+        rejects([&]{(void)design::analog_frequency_response(good,invalid);});
+    }
+    rejects([&]{(void)design::analog_frequency_response(good,T{-1});});
+    // Imaginary NaN must not be treated as a stable analog pole merely
+    // because its real component is negative.
+    Zpk invalid_stable=good;
+    invalid_stable.poles[0]=Complex{T{-0.5},nan};
+    assert(!design::analog_stable(invalid_stable));
+    assert(!design::stable(invalid_stable));
+
+    // Pairing proximity alone is NOT enough for a real-coefficient SOS:
+    // these approximate conjugates would silently discard a nonzero
+    // imaginary term in the second-order section polynomial.
+    Zpk mismatched=good;
+    mismatched.zeros[1]=Complex{static_cast<T>(0.2012),T{-0.9}};
+    bool threw=false;
+    try {(void)design::second_order_sections(mismatched);}
+    catch(const std::runtime_error&) {threw=true;}
+    assert(threw);
+    threw=false;
+    try {(void)design::transfer_function(mismatched);}
+    catch(const std::runtime_error&) {threw=true;}
+    assert(threw);
+    // Ordinary finite negative a0 and zero-degree transfer remain valid.
+    const Zpk scalar{{},{},T{-2}};
+    assert(design::transfer_function(scalar).numerator[0]==T{-2});
+    assert(design::second_order_sections(scalar).gain==T{-2});
+}
+
+template <iir::Scalar T>
 void finite_fourth_order() {
     const Wide tolerance=std::same_as<T,float>?Wide{0.003}:Wide{8.e-10};
     const std::array<Wide,2> radii{Wide{0.76},Wide{0.985}};
@@ -156,6 +215,7 @@ void finite_fourth_order() {
 template <iir::Scalar T>
 void run() {
     invalid_coefficients<T>();
+    malformed_zpk_domains<T>();
     finite_fourth_order<T>();
 }
 }  // namespace
