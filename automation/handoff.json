@@ -2,7 +2,7 @@
   "schema": 1,
   "state": "READY_TO_CONTINUE",
   "task_id": "signal-processing",
-  "work_sha": "26ad9a9042d88ab2dca9657843861e8cf26b8c8a",
-  "responds_to_run_id": "586e4b52f74d-348e2e17-e28b3d2a64762719",
-  "purpose": "Verify direct DFT float32 cancellation fix against exact independent long-double 24-size multi-seed reference (previous failing case: constant DC N=256 k=224, observed 0.001234 > bound 0.0008), without loosening acceptance. Run Release, ASan/UBSan, 118-case performance microbenchmarks; check any further numerical defects and compare same-machine direct float/double timing after fix. Keep ACTIVE until all new acceptance gates actually pass."
+  "work_sha": "6785c8ad7f14d8a5bf9b2eccca0b8ed20ab50169",
+  "responds_to_run_id": "19047b0782bf-32ac4220-d21dde9956499eed",
+  "purpose": "Expanded 24-size float32/float64 precision suite and 9/9 Release plus 9/9 ASan/UBSan CTests passed on 19047b0 after direct float32 DFT cancellation fix. 118 single-machine GCC 13.3.0 binary64 benchmark cases measured. Continue research-grade independent IIR/spectral adversarial oracles, same-regime performance comparisons and website artifact updates; cross-compiler, float32 and third-party baselines remain unverified. Keep ACTIVE and do not merge main."
 }
