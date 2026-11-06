@@ -146,6 +146,12 @@ template <signal_processing::detail::Sample Sample>
 
     std::vector<Sample> output(output_size, Sample{});
     for (std::size_t i = 0; i < output_size; ++i) {
+        if (!std::isfinite(normalization[i]) ||
+            !std::isfinite(accumulated[i].real()) ||
+            !std::isfinite(accumulated[i].imag())) {
+            throw std::invalid_argument(
+                "ISTFT weighted overlap accumulation exceeded finite scalar range");
+        }
         if (normalization[i] != Scalar{}) accumulated[i] /= normalization[i];
         output[i] = signal_processing::detail::from_complex<Sample>(accumulated[i]);
     }

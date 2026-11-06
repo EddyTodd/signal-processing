@@ -78,6 +78,19 @@ void verify() {
         rejects_invalid([&] { return stft::inverse_bluestein<Sample>(
                                    transform, invalid); });
     }
+    // Each window-square can be finite while four overlapping
+    // contributions overflow the scalar normalization sum.
+    {
+        const T amplitude = std::sqrt(std::numeric_limits<T>::max() / T{3});
+        const std::vector<T> large(4, amplitude);
+        stft::Result<Sample> overlap{};
+        overlap.frame_size = 4;
+        overlap.hop_size = 1;
+        overlap.original_size = 7;
+        overlap.frames.resize(4, std::vector<std::complex<T>>(4));
+        rejects_invalid([&] { return stft::inverse_bluestein<Sample>(
+                                   overlap, large); });
+    }
     // Genuine zero weights remain legal. A wholly zero window has
     // zero-energy samples and the documented inverse zero convention.
     const std::vector<T> zero_window(window.size(), T{});
