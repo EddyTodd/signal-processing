@@ -6,18 +6,18 @@
   "milestones": [
     {
       "id": "numerical-oracle",
-      "status": "IN_PROGRESS",
-      "evidence": "Baseline 8 Release CTest executables PASSED; independent higher-precision float32/float64 transform regression suite is newly added, awaiting fresh CI."
+      "status": "PASS_EXTENDED_BASELINE",
+      "evidence": "Independent long-double O(N^2) oracle passed in both Release and ASan/UBSan for float32/float64 forward/inverse methods, nine CTest suites; expanded 24-size/multi-seed regression newly pending CI."
     },
     {
       "id": "sanitizers",
-      "status": "PASS_BASELINE",
-      "evidence": "Baseline 8/8 ASan/UBSan tests passed at source dd299dacc2a4; report dd299dacc2a4-bdccb989-1d39f279acb77f33. New precision tests remain unverified."
+      "status": "PASS_EXTENDED_BASELINE",
+      "evidence": "9/9 ASan/UBSan CTest suites passed at 5e8707a; new larger-size/multi-seed test pending."
     },
     {
       "id": "microbenchmark",
-      "status": "PASS_BASELINE",
-      "evidence": "118 measured binary64 benchmark cases, nine trials each (1062 samples); CPU Intel i7-13700KF; compiler GCC 13.3.0; report dd299dacc2a4-bdccb989-1d39f279acb77f33."
+      "status": "PASS_EXTENDED_BASELINE",
+      "evidence": "118 methods/shapes, nine samples each, same i7-13700KF and GCC 13.3.0 at 5e8707a; no third-party baseline."
     },
     {
       "id": "audit",
@@ -36,22 +36,22 @@
     }
   ],
   "not_verified": [
-    "New tests/numerical_precision.cpp not yet run in local Release or ASan/UBSan gates",
-    "Full API numerical-domain audit, IIR stability under adversarial coefficients, exceptional inputs and high-dynamic-range conditions incomplete",
-    "Cross-platform, cross-compiler and independent FFTW/SciPy performance baselines not measured",
-    "No formal global error theorem or arbitrary-precision certification"
+    "Newly expanded 24-size and multiple-seed numerical precision suite has not passed the next pinned local CI run",
+    "IIR exceptional input and filter stability on broad parameter domains not independently certified",
+    "Third-party FFTW/SciPy comparison, cross-compiler/cross-platform/ISA benchmark and float32 performance campaign not conducted",
+    "No arbitrary-precision global error proof or full DSP API audit"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Run new float32/float64 long-double independent reference suite in local CI; diagnose discrepancies, then extend filter/state and cross-compiler accuracy and benchmark campaigns.",
+  "next": "Run expanded 24-size multi-seed float32/float64 numerical suite via local CI; inspect exact result; expand independent filter/IIR/spectral reference and comparative benchmarks.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "dd299dacc2a4-bdccb989-1d39f279acb77f33",
-    "source_sha": "dd299dacc2a4b4ef2c01953c6304da2c8a27de0c",
-    "config_sha": "bdccb989a69ac2e8b971cba58cb761d8ef82eb3f",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/dd299dacc2a4-bdccb989-1d39f279acb77f33",
-    "release_ctest": 8,
-    "asan_ubsan_ctest": 8,
+    "run_id": "5e8707acd4b8-358bd155-9b69a8ab6020425d",
+    "source_sha": "5e8707acd4b836828418f4177a4c39aa83b0dbc4",
+    "config_sha": "358bd1551660d434d9b65283dd82d0c7525b5ffc",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/5e8707acd4b8-358bd155-9b69a8ab6020425d",
+    "release_ctest": 9,
+    "asan_ubsan_ctest": 9,
     "bench_cases": 118,
     "raw_samples": 1062,
     "compiler": "GCC 13.3.0",

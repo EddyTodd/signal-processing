@@ -169,12 +169,16 @@ void verify_empty_and_invalid() {
 template <typename T>
 void run_precision_suite() {
     verify_empty_and_invalid<T>();
-    constexpr std::array<std::size_t,20> sizes={1U,2U,3U,4U,5U,6U,7U,8U,10U,
-        11U,15U,16U,17U,21U,31U,32U,35U,64U,97U,128U};
+    constexpr std::array<std::size_t,24> sizes={1U,2U,3U,4U,5U,6U,7U,8U,10U,
+        11U,15U,16U,17U,21U,31U,32U,35U,64U,97U,127U,128U,129U,256U,257U};
     for(const auto n:sizes) {
         for(const auto pattern:{Pattern::random,Pattern::impulse,Pattern::dc,
             Pattern::alternating,Pattern::coherent_tone,Pattern::mixed_dynamic_range})
             check_transform<T>(n,pattern,2718U+static_cast<std::uint32_t>(n));
+        // A second independent random stream helps detect seed-specific
+        // cancellations without quadratic work on every structured pattern.
+        check_transform<T>(n,Pattern::random,998244353U+static_cast<std::uint32_t>(n));
+        check_transform<T>(n,Pattern::mixed_dynamic_range,31337U+static_cast<std::uint32_t>(n));
     }
 }
 } // namespace

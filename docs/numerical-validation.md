@@ -40,3 +40,13 @@ It includes multiple FFT families and inverse DFT reconstruction checks.
 This suite is **pending actual CI** for the new source revision. Long-double
 arithmetic is a higher-precision independent oracle on the tested platform,
 not an arbitrary-precision guarantee for every architecture.
+
+## Verified extended-precision baseline (2026-11-06)
+
+Source `5e8707acd4b836828418f4177a4c39aa83b0dbc4`, Local CI run `5e8707acd4b8-358bd155-9b69a8ab6020425d`: all nine Release and all nine
+ASan/UBSan CTest executables passed, including `numerical_precision` with
+independent long-double O(N²) forward/inverse DFT comparison across float32
+and float64 algorithms, structured signals and varied lengths. The 118-case
+single-machine binary64 benchmark campaign also passed with nine timing
+samples per case. This validates tested finite cases only; the 24-size,
+additional-seed suite added after this run requires separate CI evidence.
