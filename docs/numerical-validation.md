@@ -862,3 +862,42 @@ near-unit high-order IIR conditioning, global numerical proof,
 external FFTW/SciPy and cross-compiler/ISA/OS benchmarks, CPU
 thermal/cache/frequency controls and multi-machine replication.
 Keep task ACTIVE.
+
+## Verified FIR extreme-symmetry correction and recovered watchdog (2026-11-06)
+
+The previous section records the pre-validation state of the FIR overflow repair. The new
+FIR relative-pair implementation and max-finite, subnormal, high-dynamic-range and
+optimized-dispatch regressions were independently exercised by the laptop in
+**17/17 assertion-enabled Release CTests** and **17/17 ASan/UBSan CTests**
+on source `db6d80d945c8a8e32f5de49e18f2a5eee0c2e06f` (handoff-only successor to work commit
+`5450b3b3fc79ff5201b20adb253fc19853718a20`). Exact published
+PASS CI reports: 
+- https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/db6d80d945c8-423435e4-707d9ad7d638718f
+- https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/db6d80d945c8-da06d2b7-f14ff5967df7c1f2
+
+The watchdog `wd-396b7685b259acae` took a snapshot during a live sanitizer
+step and separately reported `BRIDGE_SEND_UNVERIFIED`; it was not a failing
+test. The first run finished without timeout at 16:19:04Z, and the later
+da06d2b7 campaign finished without timeout at 16:25:47Z. All four stages
+in each report have zero exit codes. Published stage artifacts include the
+complete 17-test Release/sanitizer manifests and parser self-tests.
+
+The later pinned source-matched measurement has **236 actual native binary32
+and binary64 method/shape cases** (118 each, FFT/convolution/DCT/FIR),
+**nine strictly positive timing samples each = 2,124 raw samples**.
+The independently checked medians, interpolated p10/p90, MAD and
+precision/shape/regime-matched direct baselines contain no discrepancies.
+Published artifact SHA-256: `d5fdebd196921899f556c03b4bfb0ea8f34c985efb87991071d7fe7500b29cfc`.
+Machine: Intel i7-13700KF, GCC 13.3.0, `-O3 -march=native`,
+single thread; ISA capability listing is not instruction-usage proof.
+Different same-source run medians are not evidence of algorithmic improvement.
+
+The website feature commit `9b77399649e423d2c6dd977c06471f6680f1143a` pins *only* this newly
+published measured artifact to the existing accessible chart/table experience.
+GitHub Actions workflow 42253414667 status at this documentation commit: **PASS**.
+Do not claim its verification passed until the exact workflow has succeeded.
+
+Research remains **ACTIVE**: exceptional behavior of all APIs, numerical
+conditioning for high-order near-unit IIR, external FFTW/SciPy benchmarks,
+other compilers/OS/ISA, controlled clock/thermal/cache conditions, memory
+profiling and independent-machine replication remain unresolved.

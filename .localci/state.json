@@ -6,28 +6,28 @@
   "milestones": [
     {
       "id": "numerical-oracle",
-      "status": "PASS_SEVENTEEN_SPECTRAL_INPUT_DOMAINS",
-      "evidence": "Two source-matched pinned aaf3a39e506d777103a0da131829048b1cee2c91 PASS reports (aaf3a39e506d-0de4ef4b-87cbf3ccee1ac42f and aaf3a39e506d-7615bdc1-b4c6f3741e1efba2) verify 17/17 assertion-active Release CTests including spectral finite real/complex input, overflowed intermediate/PSD detection, Goertzel/Hilbert exceptional input, DCT/FIR/IIR/FFT/STFT oracles. New FIR extreme finite symmetry overflow regression in source 09429449c62b9a83d2388774cabc429b3850a11b has NOT run."
+      "status": "PASS_SEVENTEEN_FIR_SYMMETRY_EXTREMES",
+      "evidence": "Current source db6d80d945c8 (handoff-only child of FIR fix 5450b3b3) verified in exact PASS runs 423435e4 (finished 16:19Z) and da06d2b7 (finished 16:25Z): all 17/17 Release CTests with -UNDEBUG assertions on, including new dct_fir_oracles binary32/binary64 max/negative/unbalanced/subnormal coefficient symmetry classification and optimized FIR dispatch rejection. No numeric tolerance relaxed."
     },
     {
       "id": "sanitizers",
-      "status": "PASS_SEVENTEEN_ASAN_UBSAN",
-      "evidence": "Latest aaf3a39e506d-7615bdc1-b4c6f3741e1efba2 confirms 17/17 ASan and UBSan CTest executables with -UNDEBUG active and parser self-tests PASS. New FIR coefficient symmetry overflow repair not yet verified by laptop on newer source."
+      "status": "PASS_SEVENTEEN_FIR_SYMMETRY_ASAN_UBSAN",
+      "evidence": "Exact source-matched 423435e4 and da06d2b7 PASS artifacts each report 17/17 assertion-enabled AddressSanitizer/UndefinedBehaviorSanitizer CTests, GCC 13.3.0 C++23. No timeout. Published manifests include dct_fir_oracles."
     },
     {
       "id": "microbenchmark",
-      "status": "PASS_DUAL_PRECISION_MEASURED",
-      "evidence": "Latest aaf3a39e506d-7615bdc1-b4c6f3741e1efba2: complete source-matched SHA256 7e9ce4cf86fc0213cf5428e862bab54d1e4ddd309c95ca99cf44186af0d42f60, 236 actual native float32/float64 FFT/convolution/DCT/FIR cases (118/precision), 9 positive timing samples per case = 2124, median/p10/p90/MAD and matched precision/shape/regime baseline ratios independently rechecked; CPU i7-13700KF GCC 13.3.0 -O3 -march=native, ISA capability flags 102. Same source/compiler as aaf3a39e506d-0de4ef4b-87cbf3ccee1ac42f yet all 236 medians differ; do not claim method performance improvement or regression."
+      "status": "PASS_DUAL_PRECISION_MEASURED_CURRENT_SOURCE",
+      "evidence": "Source-matched da06d2b7 PASS, artifact SHA256 d5fdebd196921899f556c03b4bfb0ea8f34c985efb87991071d7fe7500b29cfc: 236 real single-thread cases, 118 native binary32 plus 118 binary64, 9 positive samples per case (2124), correct median/p10/p90/MAD and matched precision/shape/regime direct ratios checked. CPU i7-13700KF, GCC 13.3.0, -O3 -march=native, ISA capability flags, uncontrolled thermal/frequency; not external comparative evidence."
     },
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "Verified spectral finite-input/FFT/density guards in two separate 17-suite assertion-on Release and sanitizer runs. FIR audit found symmetric_coefficients/antisymmetric_coefficients with opposite or unequal near-max finite taps could overflow both |a +/- b| and (1+max|a|)*tolerance, silently classify invalid linear-phase kernels because Inf > Inf is false. New scaled residual helper avoids public scalar intermediate overflow and retains tolerance semantics, regression added for max/tiny/negative/positive taps and optimized FIR dispatch. Awaiting laptop 17-suite validation."
+      "evidence": "FIR relative-pair mismatch correction and adversarial max finite/denormal/zero-tolerance regression now verified by two new 17-suite Release and sanitizer passes; broader exceptional-value, pathological IIR and numerical-error analysis remains open."
     },
     {
       "id": "website",
-      "status": "PASS_PINNED_SEVENTEEN_SPECTRAL_ARTIFACT",
-      "evidence": "Website feature commit a0e0c820e924743bb7b7c5be386aa100968c6869 pins previously independently verified same-source aaf3a39e506d-0de4ef4b-87cbf3ccee1ac42f 17-suite GitHub artifact SHA256 89454c45da2af5f52e9f0138878d61794d20c78081abb1fa90a929d993ef0b5e with 236 native-precision measured rows, 2124 raw samples, accessible charts/tables. GitHub Actions 42240292689 SUCCESS: Astro 0 errors/warnings, provenance 3/3, build and smoke 23 static+1 proxied. Latest aaf3a39e506d-7615bdc1-b4c6f3741e1efba2 independently validated; all 236 medians vary so never mix results or infer speedup."
+      "status": "PASS_CURRENT_FIR_ARTIFACT",
+      "evidence": "Website feature branch 9b77399649e423d2c6dd977c06471f6680f1143a pins only measured da06d2b7 GitHub data SHA256 d5fdebd196921899f556c03b4bfb0ea8f34c985efb87991071d7fe7500b29cfc with all 236/2124 raw observations and existing accessible tables/charts; website Actions 42253414667 PASS. Previous website PASS 42240292689 applied to earlier artifact, not this update."
     },
     {
       "id": "reproducibility",
@@ -36,20 +36,19 @@
     }
   ],
   "not_verified": [
-    "NEW FIR overflow-safe relative symmetry/antisymmetry checks and high-dynamic-range max/tiny/zero-tolerance regression cases in dct_fir_oracles committed AFTER verified source aaf3a39; they require 17/17 assertion-active Release CTests and 17/17 ASan/UBSan CTests on current branch; pending next laptop run",
-    "Latest 236 measured FFT/convolution/DCT/FIR cases, parser checks and website benchmark apply only to tested source aaf3a39; source 0942944 FIR changes have not run in the local worker and do not yet have source-matched benchmark data",
-    "Finite-output guards and small oracles do not certify numerical accuracy on all finite inputs; full API-wide exceptional-value behavior, high-order near-unit IIR stability, formal global error bounds and platform-dependent long-double reference precision remain unresolved",
-    "External FFTW/SciPy competitive baselines, other OS/ISA/compiler, calibrated CPU thermal/cache/frequency performance, independent-machine replication, memory and throughput evidence remain unmeasured"
+    "The 17 finite CTest suites do not establish global numerical error bounds, arbitrary-precision equivalence or behavior for every exceptional input; high-order near-unit IIR conditioning and cross-platform long-double differences remain open",
+    "No published independent FFTW/SciPy competitor baselines or multiple compiler/OS/ISA and machine replications; no controlled CPU frequency/thermal/cache study or comprehensive memory bandwidth/throughput profiling",
+    "Current verification applies to tested source db6d80d945c8a8e32f5de49e18f2a5eee0c2e06f; bookkeeping-only source status/doc changes and subsequent handoff will produce a newer Git SHA that requires fresh local CI if source-SHA equality is enforced"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Next laptop worker compile source FIR relative pair mismatch and extreme finite symmetry regression, run 17/17 Release -UNDEBUG and 17/17 ASan/UBSan CTest and review any DCT_FIR_ORACLE_FAILURE or assertion without loosening tolerance, plus full parser and 236 binary32/binary64 method-shape nine-sample benchmark. Review exact next published report, update website only for verified source-matched artifact; stay ACTIVE.",
+  "next": "Continue ACTIVE. Review GitHub Actions 42253414667 for website commit 9b77399649e423d2c6dd977c06471f6680f1143a and audit current source/benchmarks. Grow independent IIR high-order near-unit, transform adversarial and exceptional-domain oracles without loosening tolerances; rerun 17+ Release/ASan/UBSan and coordinator-owned full 236-shape 9-trial measurement campaign for future code changes. Add controlled hardware/repeated cross-compiler/machine and third-party FFTW/SciPy comparisons before considering COMPLETE.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "aaf3a39e506d-7615bdc1-b4c6f3741e1efba2",
-    "source_sha": "aaf3a39e506d777103a0da131829048b1cee2c91",
-    "config_sha": "7615bdc1052efec41939a42294eb90614c7d7f6f",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/aaf3a39e506d-7615bdc1-b4c6f3741e1efba2",
+    "run_id": "db6d80d945c8-da06d2b7-f14ff5967df7c1f2",
+    "source_sha": "db6d80d945c8a8e32f5de49e18f2a5eee0c2e06f",
+    "config_sha": "da06d2b738ba6e16a88da475bd1b61d80e1a8eaf",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/db6d80d945c8-da06d2b7-f14ff5967df7c1f2",
     "release_ctest": 17,
     "asan_ubsan_ctest": 17,
     "assertions_enabled": true,
@@ -63,7 +62,7 @@
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
     "benchmark_source_sha256": "85a3c51d593800ec2c7fc137aeee1bc2f86701c04cf999d66a6bf0fef73a4198",
-    "benchmark_artifact_sha256": "7e9ce4cf86fc0213cf5428e862bab54d1e4ddd309c95ca99cf44186af0d42f60"
+    "benchmark_artifact_sha256": "d5fdebd196921899f556c03b4bfb0ea8f34c985efb87991071d7fe7500b29cfc"
   },
   "previous_failed_ci": {
     "status": "FAIL",
@@ -84,15 +83,15 @@
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
-  "website_commit": "a0e0c820e924743bb7b7c5be386aa100968c6869",
+  "website_commit": "9b77399649e423d2c6dd977c06471f6680f1143a",
   "coordinator_pending_commit": null,
   "website_verification": {
     "status": "PASS",
-    "run_id": 42240292689,
+    "run_id": 42253414667,
     "workflow": "Bouncing Balls verification",
-    "tested_sha": "a0e0c820e924743bb7b7c5be386aa100968c6869",
-    "tests": "Astro check 0 errors/0 warnings; provenance 3/3; full build; smoke 23 static and 1 proxied routes passed",
-    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42240292689"
+    "tested_sha": "9b77399649e423d2c6dd977c06471f6680f1143a",
+    "tests": "Website GitHub Actions SUCCESS; campaign's existing static data integrity contract applies",
+    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42253414667"
   },
   "last_resolved_failed_ci": {
     "status": "FAIL",
