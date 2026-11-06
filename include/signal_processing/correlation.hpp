@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <complex>
 #include <cstddef>
 #include <limits>
 #include <stdexcept>
@@ -65,11 +66,25 @@ private:
 
 template <signal_processing::detail::Sample T>
 [[nodiscard]] std::vector<T> normalize(std::span<const T> lhs, std::span<const T> rhs,
-                                       std::span<const T> raw) {
+                                       std::span<const T> raw, bool from_fft = false) {
     std::vector<T> output(raw.size(), T{});
     if (raw.empty()) return output;
     const EnergyTree<T> lhs_energy(lhs);
     const EnergyTree<T> rhs_energy(rhs);
+    using Scalar = signal_processing::detail::scalar_t<T>;
+    // FFT convolution has a nonzero absolute roundoff floor: a tiny
+    // overlap can give a large *relative* normalized error even though
+    // the unnormalized Fourier result satisfies a normal absolute bound.
+    // Directly recompute only ill-conditioned overlaps in long double.
+    const long double total_energy_scale =
+        std::sqrt(lhs_energy.sum(0, lhs.size())) *
+        std::sqrt(rhs_energy.sum(0, rhs.size()));
+    const long double fft_roundoff_floor =
+        from_fft ? 4096.L *
+            static_cast<long double>(std::numeric_limits<Scalar>::epsilon()) *
+            (2.L + std::log2(1.L + static_cast<long double>(
+                std::max(lhs.size(), rhs.size())))) * total_energy_scale
+            : 0.L;
     const auto lhs_size = static_cast<std::ptrdiff_t>(lhs.size());
     const auto rhs_size = static_cast<std::ptrdiff_t>(rhs.size());
 
@@ -87,8 +102,33 @@ template <signal_processing::detail::Sample T>
         // Compute square roots separately to reduce product overflow.
         const long double denominator = std::sqrt(left) * std::sqrt(right);
         if (!(denominator > 0.L)) continue; // Zero-energy overlap maps to zero.
-        if constexpr (signal_processing::detail::SampleTraits<T>::is_complex) {
-            using Scalar = signal_processing::detail::scalar_t<T>;
+        if (from_fft && denominator <= fft_roundoff_floor) {
+            std::complex<long double> numerator{};
+            for (auto i = i_first; i < i_last; ++i) {
+                const auto j = i - lag;
+                const auto x = lhs[static_cast<std::size_t>(i)];
+                const auto y = rhs[static_cast<std::size_t>(j)];
+                if constexpr (signal_processing::detail::SampleTraits<T>::is_complex) {
+                    const std::complex<long double> xl{
+                        static_cast<long double>(x.real()),
+                        static_cast<long double>(x.imag())};
+                    const std::complex<long double> yl{
+                        static_cast<long double>(y.real()),
+                        static_cast<long double>(y.imag())};
+                    numerator += xl * std::conj(yl);
+                } else {
+                    numerator += std::complex<long double>{
+                        static_cast<long double>(x) * static_cast<long double>(y), 0.L};
+                }
+            }
+            if constexpr (signal_processing::detail::SampleTraits<T>::is_complex) {
+                output[index] = T{
+                    static_cast<Scalar>(numerator.real() / denominator),
+                    static_cast<Scalar>(numerator.imag() / denominator)};
+            } else {
+                output[index] = static_cast<T>(numerator.real() / denominator);
+            }
+        } else if constexpr (signal_processing::detail::SampleTraits<T>::is_complex) {
             output[index] = T{
                 static_cast<Scalar>(static_cast<long double>(raw[index].real()) / denominator),
                 static_cast<Scalar>(static_cast<long double>(raw[index].imag()) / denominator)};
@@ -158,7 +198,7 @@ template <signal_processing::detail::Sample T>
 [[nodiscard]] inline std::vector<T> normalized_fft(std::span<const T> lhs,
                                                     std::span<const T> rhs) {
     const auto raw = cross_fft<T>(lhs, rhs);
-    return detail::normalize<T>(lhs, rhs, raw);
+    return detail::normalize<T>(lhs, rhs, raw, true);
 }
 
 // Compatibility names from the initial milestone; both are direct definitions.
