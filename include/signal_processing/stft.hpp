@@ -38,7 +38,13 @@ namespace detail {
     }
     if (signal_size <= frame_size) return 1;
     const std::size_t remainder = signal_size - frame_size;
-    return 1 + remainder / hop_size + (remainder % hop_size == 0 ? 0 : 1);
+    const std::size_t required = 1 + remainder / hop_size +
+                                 (remainder % hop_size == 0 ? 0 : 1);
+    // When hop_size > frame_size, the regular hop grid can skip samples.
+    // Never manufacture trailing frames whose start is past the input end:
+    // such frames are entirely synthetic zeros, not signal-bearing windows.
+    const std::size_t nonempty = 1 + (signal_size - 1) / hop_size;
+    return std::min(required, nonempty);
 }
 
 }  // namespace detail

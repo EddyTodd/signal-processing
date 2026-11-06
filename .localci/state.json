@@ -6,28 +6,28 @@
   "milestones": [
     {
       "id": "numerical-oracle",
-      "status": "PASS_EXPANDED_FINITE_SUITE",
-      "evidence": "Verified 24-size/multi-seed float32+float64 independent long-double FFT oracle and tightened analytic DC leakage checks on 60f0923; 9/9 Release CTest executables. New long-double IIR pole/difference-equation oracle newly added, not yet CI-tested."
+      "status": "PASS_IIR_AND_FFT_FINITE",
+      "evidence": "Pinned 6e1862fba245051f75205401f9ae37981cd533e1 passed 10/10 Release CTests including analytically placed IIR stable poles (float32/float64), independent long-double recurrence, closed-form first-order response and tightened FFT DC cancellation. New independent spectral/STFT oracle and hop>frame boundary regression pending next run."
     },
     {
       "id": "sanitizers",
-      "status": "PASS_EXPANDED_FINITE_SUITE",
-      "evidence": "Previous source 60f0923 passed 9/9 ASan/UBSan CTest. Source d066ee6 failed during Release compilation before sanitizers; new IIR oracle sanitizer gate remains UNVERIFIED."
+      "status": "PASS_TEN_SUITE_SANITIZED",
+      "evidence": "Pinned 6e1862fba245051f75205401f9ae37981cd533e1 passed 10/10 ASan/UBSan CTests with -UNDEBUG asserts enabled; new STFT spectral oracle and boundary behavior need next sanitizer run."
     },
     {
       "id": "microbenchmark",
       "status": "PASS_DUAL_PRECISION_MEASURED",
-      "evidence": "Published source 60f0923: 236 cases = 118 each binary32 and binary64, 9 raw timed samples each (2124 total), GCC 13.3.0 i7-13700KF; separate template instantiations, CPU ISA capability metadata, median/p10/p90/MAD; no cross-precision ratios. External and cross-platform baselines pending."
+      "evidence": "Pinned 6e1862fba245051f75205401f9ae37981cd533e1 published 236 real FFT/convolution/DCT/FIR timing cases, 118 each float32/float64, nine samples each (2124 raw). GCC 13.3.0, i7-13700KF, -march=native and CPU ISA capability flags; empirical p10/p90/MAD, no cross-precision speedup claims."
     },
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "New IIR reference suite failed at Release compile, not at a numerical assertion: ambiguous brace-list BiquadTransposedDirectFormII<T> test construction on source d066ee6. Explicit BiquadCoefficients<T> fixes the test declaration; per-case IIR numerical mismatch diagnostics added without changing acceptance bounds. Require new pinned CTest Release/ASan/UBSan evidence."
+      "evidence": "IIR long-double and closed-form oracles confirmed in 10-suite Release and sanitizer gates. STFT pad_end hop>frame_size produced redundant all-zero frames; fixed frame-count bound and added independent direct-DFT spectral/PSD/CSD/Welch reconstruction oracle, pending next Local CI."
     },
     {
       "id": "website",
-      "status": "PASS_VERIFIED_DUAL_PRECISION",
-      "evidence": "Website feature commit 096e02aaa61bf345dc7fc7e50549ddb9afd4711c publishes 236 verified binary32/binary64 benchmark rows (2124 samples), accessible precision-filtered chart/table and provenance. GitHub Actions verification run 42169512038 passed Astro check, 3 measured-artifact tests, build and smoke."
+      "status": "UPDATED_PINNED_BENCHMARK_PENDING_VERIFY",
+      "evidence": "Website 55c3960828572bb3f41fa507189d91fa358d7b63 now cites actual pinned 6e1862fba245-acfb166f-969900ae365f85eb 10-suite 236-case artifact; new website commit needs its own verification workflow. Previous 096e02a website PASS verified."
     },
     {
       "id": "reproducibility",
@@ -36,22 +36,22 @@
     }
   ],
   "not_verified": [
-    "Explicitly typed IIR biquad invalid-domain regression and all new IIR numerical oracles require a fresh Release build and ASan/UBSan run (10 CTests expected); failed d066ee6 did not execute CTest",
-    "New failure diagnostics for IIR recurrence/frequency paths have not been compiled or exercised by Local CI",
-    "IIR stability across high-order/near-marginal designs, exceptional-input behavior and arbitrary precision bounds remain uncertified",
-    "No external FFTW/SciPy, alternative compiler/ISA/platform benchmark, memory/throughput study or independent multi-machine replication"
+    "New independent spectral_oracles CTest executable with native float32/float64 real/complex STFT, Welch/CSD/periodogram oracles and hop>frame boundary correction has not run (11 tests expected per Release and sanitizer build)",
+    "Website artifact-refresh commit 55c3960828572bb3f41fa507189d91fa358d7b63 requires its own build/test workflow verification; earlier website commit passed",
+    "Arbitrary-precision global error bounds, full NaN/Inf/overflow contracts across DSP API, IIR high-order near-unit pole conditioning and cross-machine statistical replication remain uncertified",
+    "External FFTW/SciPy baselines, alternate compiler/ISA/platform benchmarks and memory/throughput studies remain unmeasured"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Verify explicit typed BiquadCoefficients<T> test construction compiles, run 10/10 Release and 10/10 ASan/UBSan CTests; analyze any emitted IIR_ORACLE_RECURRENCE_FAILURE or IIR_ORACLE_FREQUENCY_FAILURE without relaxing tolerances. Then inspect full 236-case dual-precision benchmark and update research limits before further work.",
+  "next": "Verify 11/11 Release and ASan/UBSan including new direct long-double spectral_oracles; run complete dual-precision benchmarks, review raw artifacts, and confirm website refresh GitHub workflow. If the STFT gap/padding oracle fails, repair real boundary semantics without weakening tolerances. Continue broader research after evidence.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "60f092336418-cc8a52e4-85de15eedeb8b224",
-    "source_sha": "60f0923364188f9cfb728c40676c1adf6015e063",
-    "config_sha": "cc8a52e49ba0c06578c2ec698c0bc605fa40a1c5",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/60f092336418-cc8a52e4-85de15eedeb8b224",
-    "release_ctest": 9,
-    "asan_ubsan_ctest": 9,
+    "run_id": "6e1862fba245-acfb166f-969900ae365f85eb",
+    "source_sha": "6e1862fba245051f75205401f9ae37981cd533e1",
+    "config_sha": "acfb166f8e9c2a72e5a57e5bed8eb558c8d93fb1",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/6e1862fba245-acfb166f-969900ae365f85eb",
+    "release_ctest": 10,
+    "asan_ubsan_ctest": 10,
     "assertions_enabled": true,
     "bench_cases": 236,
     "bench_cases_per_precision": 118,
@@ -62,7 +62,7 @@
     ],
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
-    "benchmark_artifact_sha256": "e5eee46e34bdbb085bef75c79c759c5c8ac62b8b3d7c6365bcf71e0911d5b5f9"
+    "benchmark_artifact_sha256": "ccefa92d3c9c9bcf66c2a71edd434050ad6e3a1caed02267267cce517a68b346"
   },
   "previous_failed_ci": {
     "status": "FAIL",
@@ -83,7 +83,7 @@
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
-  "website_commit": "096e02aaa61bf345dc7fc7e50549ddb9afd4711c",
+  "website_commit": "55c3960828572bb3f41fa507189d91fa358d7b63",
   "coordinator_pending_commit": null,
   "website_verification": {
     "status": "PASS",
@@ -93,7 +93,7 @@
     "tests": "Astro check, npm run test:signal:results 3/3, site build and smoke passed",
     "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42169512038"
   },
-  "current_failed_ci": {
+  "last_resolved_failed_ci": {
     "status": "FAIL",
     "run_id": "d066ee6d0865-0d022547-ec5d160c55a751b2",
     "tested_sha": "d066ee6d0865b7043a0b214ad384caa25a236930",
@@ -104,6 +104,7 @@
     "release_ctest": "not executed; compilation failed",
     "sanitizer_ctest": "not executed",
     "benchmark": "not executed",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/d066ee6d0865-0d022547-ec5d160c55a751b2"
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/d066ee6d0865-0d022547-ec5d160c55a751b2",
+    "resolved_in_verified_run": "6e1862fba245-acfb166f-969900ae365f85eb"
   }
 }

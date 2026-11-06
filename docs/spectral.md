@@ -12,7 +12,7 @@ X_m[k] = \sum_{n=0}^{L-1} x[mH+n]w[n]e^{-2\pi i kn/L}.
 
 `stft::bluestein` evaluates every frame with the repository's arbitrary-length Bluestein FFT. The returned frames contain all \(L\) complex DFT bins. The public hop and window are never selected automatically.
 
-With `pad_end=false`, only complete frames are emitted. With `pad_end=true`, the regular hop sequence is extended only far enough for the last frame to cover the final input sample; missing samples in that final frame are zero. No redundant later tail frames, centering, or implicit leading padding are added.
+With `pad_end=false`, only complete frames are emitted. With `pad_end=true`, the regular hop sequence extends toward the last input sample, zero-padding missing samples in the last emitted frame. Frames whose starting offset lies at or beyond the input end are never emitted. For `hop_size <= frame_size`, the last input sample is covered; for a larger hop, the regular grid can leave gaps or an uncovered tail, which synthesis returns as zeros. No redundant empty tail frames, centering, or implicit leading padding are added.
 
 Real and complex binary32/binary64 sample streams are supported. The analysis window is always real-valued in the corresponding scalar format.
 
@@ -147,3 +147,25 @@ All public algorithms in this milestone use binary32 or binary64. FFT-based meth
 STFT reconstruction, Welch averaging, and cross-spectral averaging change floating-point operation order relative to a single direct expression, so correctness is based on format-specific tolerances and mathematical identities rather than bit equality. The tests cover real and complex STFT reconstruction, PSD/CSD consistency, one-sided power conservation for a bin-centered real sinusoid, Goertzel phase agreement with the DFT, arbitrary-frequency Goertzel evaluation, and analytic-signal reconstruction for a bin-centered cosine.
 
 The repository intentionally does not include timing, estimator campaign statistics, automatic window selection, automatic overlap selection, or spectral plotting. Those belong outside the algorithm library.
+
+## Independent spectral oracle expansion (pending next Local CI)
+
+A new `signal_processing_spectral_oracles` CTest target uses direct
+`long double` textbook O(L²) DFT evaluations, independently of production
+Bluestein, to validate real and complex binary32/binary64 STFT coefficients
+over multiple odd/even frame lengths, shorter-than-window input, partial end
+padding, no-padding, nonuniform positive windows and hops exceeding the frame
+length. The independent weighted-overlap oracle checks reconstruction on
+covered samples and the documented zero contract for uncovered gaps and tails.
+Direct long-double spectral sums also check periodogram, Welch PSD,
+cross-spectral density, frame-by-frame spectrogram and one-sided DC/Nyquist
+doubling. Negative-domain tests cover empty windows, zero hop/sample rate,
+zero-energy windows, malformed inverse frames and complex one-sided rejection.
+
+A boundary defect was found by audit before CI: when `hop_size > frame_size`,
+the prior padded STFT frame-count formula sometimes appended a frame whose
+start was beyond the input (all synthetic zeros). The change limits the count
+to frames with start offset strictly inside the input; it does not change
+ordinary overlapping STFT behavior. This fix and the new tests are *not yet
+measured or verified*. A future report must independently confirm the
+11-executable Release and ASan/UBSan gates and the published benchmark suite.
