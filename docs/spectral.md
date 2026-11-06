@@ -148,7 +148,7 @@ STFT reconstruction, Welch averaging, and cross-spectral averaging change floati
 
 The repository intentionally does not include timing, estimator campaign statistics, automatic window selection, automatic overlap selection, or spectral plotting. Those belong outside the algorithm library.
 
-## Independent spectral oracle expansion (pending next Local CI)
+## Independent spectral oracle expansion (validated in Local CI)
 
 A new `signal_processing_spectral_oracles` CTest target uses direct
 `long double` textbook O(L²) DFT evaluations, independently of production
@@ -166,9 +166,10 @@ A boundary defect was found by audit before CI: when `hop_size > frame_size`,
 the prior padded STFT frame-count formula sometimes appended a frame whose
 start was beyond the input (all synthetic zeros). The change limits the count
 to frames with start offset strictly inside the input; it does not change
-ordinary overlapping STFT behavior. This fix and the new tests are *not yet
-measured or verified*. A future report must independently confirm the
-11-executable Release and ASan/UBSan gates and the published benchmark suite.
+ordinary overlapping STFT behavior. This fix and its independent spectral oracles were later verified in the
+15-suite Release and ASan/UBSan Local CI report `0ee79b23ee01-a5ca7912-9aeb772c1efca341`.
+The published 236-case native-precision benchmark campaign also passed; this
+finite evidence is not a proof of all possible inputs.
 
 ## Spectral API exceptional-input contract
 
@@ -186,5 +187,27 @@ return empty results, but cannot suppress window validation.
 These guards apply to estimator parameters, not arbitrary sample
 amplitudes, which can still overflow spectral FFT or power products.
 The corresponding independent `signal_processing_spectral_domains`
-CTest covers both float formats and real/complex samples and is
-**pending 15-suite Release and ASan/UBSan laptop verification**.
+CTest covers both float formats and real/complex samples and passed 15/15 Release and 15/15 ASan/UBSan executables with assertions active
+in pinned run `0ee79b23ee01-a5ca7912-9aeb772c1efca341`.
+
+## Pending direct STFT/ISTFT parameter and overlap-domain regression
+
+Direct `stft::bluestein` now rejects NaN/Inf window coefficients, even when
+no input frames exist. `stft::inverse_bluestein` rejects nonfinite window
+coefficients or complex spectral frame bins. For any **nonzero** window
+coefficient, its squared weight must remain finite and nonzero in the
+public scalar type, preventing silent zero or infinity denominator at
+covered samples; truly zero coefficients remain legal and use the
+documented uncovered/zero-energy output convention. The inverse also
+detects accumulated nonfinite overlap numerator or normalization sums,
+including the case where each squared window weight is finite but their
+sum over many overlapping frames overflows. These conditions raise
+`std::invalid_argument`, not an unexamined NaN/Inf output.
+
+A dedicated `signal_processing_stft_domains` 16th CTest exercises real
+and complex float32/float64 nonfinite windows/frames, underflowed and
+overflowed nonzero weights, cumulative overlap overflow, legal zero
+windows, and reconstruction through finite negative weights.
+**These additions have not yet passed laptop CI**; the next run must
+verify all **16/16 Release** and **16/16 ASan/UBSan** assertions and the
+fresh reproducible benchmark campaign.

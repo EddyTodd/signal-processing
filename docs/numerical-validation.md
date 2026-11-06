@@ -583,3 +583,55 @@ the benchmark/parser campaign and source-SHA-matched artifact.
 Finite input/output guardrails do not prove all intermediate FFT
 products remain representable; no full numerical stability or
 third-party competitiveness is claimed.
+
+## Verified 15-suite spectral domain campaign (2026-11-06)
+
+Pinned source `0ee79b23ee013e0131b32d0decfea5639d82a0de`, workflow `a5ca79128a076396583962b39b22d4db6b5321ce`, run `0ee79b23ee01-a5ca7912-9aeb772c1efca341`:
+https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/0ee79b23ee01-a5ca7912-9aeb772c1efca341
+
+All **15/15 Release** and **15/15 ASan/UBSan** CTest executables
+passed with `-UNDEBUG` assertions enabled, including independent
+real/complex float32/float64 spectral-domain checks for NaN/Inf/invalid
+rate and window inputs, empty/short input contracts, unrepresentable
+spectral density normalization and unknown sides enum. Earlier
+independent long-double Fourier, IIR/ZPK, STFT, convolution, DCT/FIR
+regressions also passed. Benchmark parser self-tests passed.
+
+The pinned artifact (SHA-256 `195274472d4b9332964b51e899038022ba6d5d780d6a3b3f8e95593a7f99a1f1`) includes **236
+actual method/shape cases**, 118 binary32 and 118 binary64, with **9
+raw timed samples per case = 2,124 total**, verified medians, p10/p90,
+MAD and matched precision/shape/regime baseline ratios. GCC 13.3.0
+and Intel i7-13700KF, `-O3 -DNDEBUG -std=c++23 -march=native
+-fno-omit-frame-pointer`, 102 *available* ISA flags (not a per-kernel
+disassembly audit). Spread is empirical single-machine variability,
+not a confidence interval. No external FFTW/SciPy, other-compiler,
+other-ISA or thermal-controlled performance results are implied.
+
+Website feature commit `dbae6a84c6dbc786f4398ea6c928bd84bd724d29` displays **exactly this**
+GitHub-published source-matched artifact and accessible
+precision-selectable comparisons. GitHub Actions
+https://github.com/EddyTodd/eddytodd-web/actions/runs/42227671594
+PASSED Astro (0 errors/warnings), all 3/3 data-provenance tests,
+complete build and 23 static + 1 proxied smoke routes.
+
+### Pending STFT inverse weight and overflow contracts
+
+A direct audit identified acceptance of nonfinite STFT analysis-window
+weights even for empty inputs, plus inverse analysis on user-built
+frames with NaN/Inf bins or on windows whose squared weights underflow
+or overflow. Even if each weight-square remains finite, many overlapping
+frames can overflow their sum and silently poison inverse output.
+
+The new `stft.hpp` guards validate window coefficients and inverse
+frame-bin finiteness, reject squared nonzero weights that collapse to
+zero or infinity, and detect nonfinite accumulated inverse overlap
+numerators or denominators. Intentional zero windows preserve zero
+reconstruction. A new `signal_processing_stft_domains` 16th CTest
+covers these exceptional domains and valid finite negative-window
+reconstruction across real/complex binary32 and binary64.
+**Not yet verified on laptop**: the next run must pass **16/16 Release**
+and **16/16 ASan/UBSan**, then rerun and publish 236 full dual-precision
+nine-sample benchmark cases plus parser self-tests. Remaining gaps
+include pathological intermediate FFT overflow, near-unit high-order
+IIR conditioning, complete API-wide NaN/Inf behavior, external
+benchmark baselines and cross-machine reproducibility.

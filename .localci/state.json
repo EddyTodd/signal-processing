@@ -6,28 +6,28 @@
   "milestones": [
     {
       "id": "numerical-oracle",
-      "status": "PASS_14_EXTREME_CORRELATION",
-      "evidence": "Pinned d07d6db4f24c-1873d453-0b30aba5b2261519 confirms 14/14 Release CTests with -UNDEBUG asserts, including the extreme small/large finite normalized cross-correlation direct/FFT regression on float32/64 real and complex, independent long-double DCT/FIR/FFT/IIR/STFT and spectral oracles. New spectral parameter-domain executable is pending 15th-suite CI."
+      "status": "PASS_15_SPECTRAL_DOMAINS",
+      "evidence": "Exact run 0ee79b23ee01-a5ca7912-9aeb772c1efca341 passed 15/15 Release CTest executables with assertions active, including spectral_domains finite sample rate, supported sides, nonfinite window and normalization products, short/empty invalid inputs for real/complex float32/64, plus long-double FFT/IIR/DCT/FIR/STFT and convolution oracles. New STFT direct/inverse domain and overflow checks are pending 16th CTest validation."
     },
     {
       "id": "sanitizers",
-      "status": "PASS_14_EXTREME_CORRELATION",
-      "evidence": "Pinned d07d6db4f24c-1873d453-0b30aba5b2261519 confirms 14/14 ASan/UBSan CTests with assertions enabled and all benchmark/parser stages. New spectral parameter validation and spectral_domains target have not run on laptop; expect 15/15 both configurations."
+      "status": "PASS_15_ASAN_UBSAN",
+      "evidence": "Exact pinned 0ee79b23ee01-a5ca7912-9aeb772c1efca341 passed 15/15 ASan/UBSan CTest executables, -UNDEBUG assertions active. New stft_domains test and forward/inverse finite-window and overlap guards introduced after the verified source, not sanitizer-tested yet."
     },
     {
       "id": "microbenchmark",
       "status": "PASS_DUAL_PRECISION_MEASURED",
-      "evidence": "Pinned d07d6db4f24c-1873d453-0b30aba5b2261519 publishes 236 native binary32/binary64 FFT/convolution/DCT/FIR measured variants, 118 per precision, 9 raw timing samples each (2124), with recomputed median/p10/p90/MAD and matched precision/shape/regime speedups. Artifact SHA256 f87d3953a81b0e42c472e704b5faaa6416cad0f59cc899ab9fb2b28a4fb8fce2, GCC13.3 -O3 -march=native, i7-13700KF, 102 ISA capability flags (not per-kernel executed-instruction proof); machine conditions uncontrolled."
+      "evidence": "Pinned 0ee79b23ee01-a5ca7912-9aeb772c1efca341 benchmark source 85a3c51d59 measured 236 FFT/convolution/DCT/FIR matched method-shapes (118 separately compiled binary32 and 118 binary64), 9 raw samples each (2,124), all rechecked median, p10/p90, MAD, baseline speedups and per-shape pair coverage; full artifact SHA256 195274472d4b9332964b51e899038022ba6d5d780d6a3b3f8e95593a7f99a1f1. CPU i7-13700KF GCC 13.3.0 -O3 -march=native, 102 available ISA flags; no claim of instruction-use verification or independent-machine uncertainty."
     },
     {
       "id": "audit",
       "status": "IN_PROGRESS",
-      "evidence": "Verified dynamic-range normalized correlation fixes passed 14 Release and 14 ASan/UBSan suites. New correctness audit found periodogram empty-input shape mismatch, nonfinite sample_rate, nonfinite/overflowed window energy and normalization silently yielding zero/Inf, invalid sides enum and short-input Welch/CSD early returns bypassing invalid window checks. Guards added in spectral.hpp, separate independent spectral_domains test with 4 native public sample types; code pending next 15-suite laptop CI."
+      "evidence": "Current verified source 0ee79b23ee013e0131b32d0decfea5639d82a0de passed 15-suite spectral invalid-domain and empty boundary suite. New audit found direct stft::bluestein accepted NaN/Inf window coefficients even for empty input; inverse accepted NaN/Inf frame bins, squared weights that underflowed to zero or overflowed, and multi-frame normalization that overflowed despite each squared weight remaining finite. Added explicit validation and new 16th stft_domains CTest, including all 4 public sample types; next laptop CI required."
     },
     {
       "id": "website",
-      "status": "PASS_PINNED_14_CORRELATION_MEASUREMENTS",
-      "evidence": "Website feature commit 5b46e70a47664e4cbb0e452ef7f60ab2c1f5f266 pins exact measured source d07d6db4f24cd4c111bc466c39c17457dc74c6b4 run d07d6db4f24c-1873d453-0b30aba5b2261519 artifact SHA256 f87d3953a81b0e42c472e704b5faaa6416cad0f59cc899ab9fb2b28a4fb8fce2 (236 precision-separated cases, 2124 actual timings). Workflow 42225998150 SUCCESS: Astro 0 errors/warnings, benchmark provenance 3/3, full static build and smoke 23 static + 1 proxied routes; no data attributed to newer spectral code."
+      "status": "PASS_PINNED_15_SPECTRAL_MEASUREMENTS",
+      "evidence": "Website commit dbae6a84c6dbc786f4398ea6c928bd84bd724d29 pins exact published 15-suite run 0ee79b23ee01-a5ca7912-9aeb772c1efca341 artifact SHA256 195274472d4b9332964b51e899038022ba6d5d780d6a3b3f8e95593a7f99a1f1, 236 precision-selected cases/2,124 genuine raw timings. GitHub workflow 42227671594 PASS: Astro 0 errors and warnings, benchmark provenance 3/3, full build and 23-static/1-proxied smoke; no attribution to newer unverified STFT code."
     },
     {
       "id": "reproducibility",
@@ -36,22 +36,22 @@
     }
   ],
   "not_verified": [
-    "New spectral.hpp finite-positive sampling rate, checked spectral sides and finite-positive normalization/energy contracts plus dedicated spectral_domains CTest are committed after verified source d07d6db; next laptop run must PASS 15/15 Release and 15/15 ASan/UBSan with C assertions active",
-    "New spectral source has NOT been benchmarked by laptop; next run must verify 236 binary32/binary64 cases (118 each, 9 timing samples per case) and parser tests before website evidence can advance to current branch",
-    "Pathological finite signals can still overflow intermediate FFT/power results; long-double dynamic range varies by platform; no formal global precision or high-order near-unit IIR stability guarantee",
-    "External FFTW/SciPy benchmarks, cross-platform/compiler/ISA evidence, independent machine replication, thermal and cache control and memory/throughput benchmarking remain unmeasured"
+    "New stft.hpp finite-window parameter checks, inverse spectral-bin validation, scalar square-underflow/overflow detection and overlap accumulation overflow guard, plus sixteenth CTest signal_processing_stft_domains, have not run in laptop Local CI: require 16/16 Release -UNDEBUG and 16/16 ASan/UBSan",
+    "Latest measured 236-case benchmark report and website pin source 0ee79b2; new STFT changes after it have not been microbenchmarked or parser-verified. Publish fresh GitHub 236-case 118 float32 +118 float64, nine samples each, before updating website attribution",
+    "Finite FFT/power calculations may still overflow on some huge inputs; STFT inverse cannot guarantee restoration for severely ill-conditioned windows; global high-order near-unit IIR stability, NaN/Inf contracts across all DSP APIs and formal arbitrary-precision numerical proofs remain unverified",
+    "Independent FFTW/SciPy library comparisons, cross-platform/compiler/ISA evidence, thermal/frequency/cache control, independent-machine replication and memory/throughput studies remain unmeasured"
   ],
   "website": "EddyTodd/eddytodd-web feature/signal-processing-lab-20261105",
   "coordinator": "EddyTodd/local-ci-coordinator projects/signal_processing.json",
-  "next": "Next laptop Local CI must compile spectral_domains (15th CTest), run 15/15 Release with -UNDEBUG and 15/15 ASan/UBSan, verify all new NaN/Inf/overflowed rate/window/sides/short-input assertions without weakening existing oracle bounds, then publish and inspect 236 precision-separated nine-sample benchmark cases plus parser self-tests. Only update website using measured GitHub artifact. Keep ACTIVE.",
+  "next": "Next laptop Local CI should compile and run 16/16 Release -UNDEBUG assertion-active and 16/16 ASan/UBSan, particularly stft_domains for NaN/Inf windows and spectral frames, subnormal/huge nonzero window squared weights, multi-frame overlap overflow, legal zero windows and finite negative-window reconstruction; then run full 236-case 9-sample each binary32/binary64 benchmark/parser, review exact report. Keep ACTIVE and do not claim COMPLETE.",
   "current_verified_ci": {
     "status": "PASS",
-    "run_id": "d07d6db4f24c-1873d453-0b30aba5b2261519",
-    "source_sha": "d07d6db4f24cd4c111bc466c39c17457dc74c6b4",
-    "config_sha": "1873d453ccf98ce9e38582ea70b25c303c25b9da",
-    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/d07d6db4f24c-1873d453-0b30aba5b2261519",
-    "release_ctest": 14,
-    "asan_ubsan_ctest": 14,
+    "run_id": "0ee79b23ee01-a5ca7912-9aeb772c1efca341",
+    "source_sha": "0ee79b23ee013e0131b32d0decfea5639d82a0de",
+    "config_sha": "a5ca79128a076396583962b39b22d4db6b5321ce",
+    "report_url": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/0ee79b23ee01-a5ca7912-9aeb772c1efca341",
+    "release_ctest": 15,
+    "asan_ubsan_ctest": 15,
     "assertions_enabled": true,
     "bench_cases": 236,
     "bench_cases_per_precision": 118,
@@ -63,7 +63,7 @@
     "compiler": "GCC 13.3.0",
     "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
     "benchmark_source_sha256": "85a3c51d593800ec2c7fc137aeee1bc2f86701c04cf999d66a6bf0fef73a4198",
-    "benchmark_artifact_sha256": "f87d3953a81b0e42c472e704b5faaa6416cad0f59cc899ab9fb2b28a4fb8fce2"
+    "benchmark_artifact_sha256": "195274472d4b9332964b51e899038022ba6d5d780d6a3b3f8e95593a7f99a1f1"
   },
   "previous_failed_ci": {
     "status": "FAIL",
@@ -84,15 +84,15 @@
     },
     "report": "https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/586e4b52f74d-348e2e17-e28b3d2a64762719"
   },
-  "website_commit": "5b46e70a47664e4cbb0e452ef7f60ab2c1f5f266",
+  "website_commit": "dbae6a84c6dbc786f4398ea6c928bd84bd724d29",
   "coordinator_pending_commit": null,
   "website_verification": {
     "status": "PASS",
-    "run_id": 42225998150,
+    "run_id": 42227671594,
     "workflow": "Bouncing Balls verification",
-    "tested_sha": "5b46e70a47664e4cbb0e452ef7f60ab2c1f5f266",
-    "tests": "Astro check 0 errors and 0 warnings; 3/3 benchmark provenance tests; full build; smoke 23 static plus 1 proxied route passed",
-    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42225998150"
+    "tested_sha": "dbae6a84c6dbc786f4398ea6c928bd84bd724d29",
+    "tests": "Astro 0 errors, 0 warnings; benchmark provenance 3/3; full build; smoke 23 static plus 1 proxied route passed",
+    "url": "https://github.com/EddyTodd/eddytodd-web/actions/runs/42227671594"
   },
   "last_resolved_failed_ci": {
     "status": "FAIL",
