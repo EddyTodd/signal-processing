@@ -60,7 +60,13 @@ template <fft::Scalar T>
 [[nodiscard]] inline bool symmetric_coefficients(std::span<const T> coefficients,
                                                   T tolerance = T{8} *
                                                       std::numeric_limits<T>::epsilon()) {
-    if (tolerance < T{0}) throw std::invalid_argument("symmetry tolerance must be nonnegative");
+    if (!(tolerance >= T{0}) || !std::isfinite(tolerance))
+        throw std::invalid_argument("symmetry tolerance must be finite and nonnegative");
+    // NaN would otherwise pass comparisons (including the odd center tap).
+    // Infinite values can incorrectly satisfy the scaled difference check.
+    if (!std::all_of(coefficients.begin(), coefficients.end(),
+                     [](T coefficient) { return std::isfinite(coefficient); }))
+        return false;
     for (std::size_t k = 0; k < coefficients.size() / 2; ++k) {
         const T a = coefficients[k];
         const T b = coefficients[coefficients.size() - 1 - k];
@@ -74,7 +80,11 @@ template <fft::Scalar T>
 [[nodiscard]] inline bool antisymmetric_coefficients(std::span<const T> coefficients,
                                                       T tolerance = T{8} *
                                                           std::numeric_limits<T>::epsilon()) {
-    if (tolerance < T{0}) throw std::invalid_argument("antisymmetry tolerance must be nonnegative");
+    if (!(tolerance >= T{0}) || !std::isfinite(tolerance))
+        throw std::invalid_argument("antisymmetry tolerance must be finite and nonnegative");
+    if (!std::all_of(coefficients.begin(), coefficients.end(),
+                     [](T coefficient) { return std::isfinite(coefficient); }))
+        return false;
     for (std::size_t k = 0; k < coefficients.size() / 2; ++k) {
         const T a = coefficients[k];
         const T b = coefficients[coefficients.size() - 1 - k];

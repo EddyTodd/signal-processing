@@ -54,6 +54,11 @@ if(SIGNAL_PROCESSING_BUILD_TESTS)
     signal_processing_configure_test(signal_processing_spectral)
     add_test(NAME signal_processing_spectral COMMAND signal_processing_spectral)
 
+    add_executable(signal_processing_dct_fir_oracles tests/dct_fir_oracles.cpp)
+    signal_processing_configure_test(signal_processing_dct_fir_oracles)
+    add_test(NAME signal_processing_dct_fir_oracles
+             COMMAND signal_processing_dct_fir_oracles)
+
     add_executable(signal_processing_spectral_oracles tests/spectral_oracles.cpp)
     signal_processing_configure_test(signal_processing_spectral_oracles)
     add_test(NAME signal_processing_spectral_oracles
