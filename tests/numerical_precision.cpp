@@ -130,6 +130,28 @@ void check_transform(std::size_t n,Pattern pattern,std::uint32_t seed) {
         check("rader",fft::rader<T>(input));
     if(n==6||n==10||n==15||n==21||n==35)
         check("good_thomas",fft::good_thomas<T>(input));
+
+    // Exercise each implementation's inverse normalization independently,
+    // instead of checking an inverse that is only computed by the oracle.
+    const auto inverse_reference=reference_dft<T>(input,fft::Direction::inverse);
+    auto check_inverse=[&](const char* name,const Vector<T>& actual){
+        compare<T>(actual,inverse_reference,name);
+    };
+    check_inverse("direct_inverse",fft::dft<T>(input,fft::Direction::inverse));
+    check_inverse("mixed_radix_inverse",fft::mixed_radix<T>(input,fft::Direction::inverse));
+    check_inverse("bluestein_inverse",fft::bluestein<T>(input,fft::Direction::inverse));
+    if(fft::is_power_of_two(n)){
+        check_inverse("radix2_inverse",fft::radix2<T>(input,fft::Direction::inverse));
+        check_inverse("radix2_recursive_inverse",fft::radix2_recursive<T>(input,fft::Direction::inverse));
+        check_inverse("stockham_inverse",fft::stockham<T>(input,fft::Direction::inverse));
+        check_inverse("radix4_inverse",fft::radix4<T>(input,fft::Direction::inverse));
+        check_inverse("split_radix_inverse",fft::split_radix<T>(input,fft::Direction::inverse));
+        check_inverse("modified_split_radix_inverse",fft::modified_split_radix<T>(input,fft::Direction::inverse));
+    }
+    if(n>=3&&(n==3||n==5||n==7||n==11||n==17||n==31||n==97))
+        check_inverse("rader_inverse",fft::rader<T>(input,fft::Direction::inverse));
+    if(n==6||n==10||n==15||n==21||n==35)
+        check_inverse("good_thomas_inverse",fft::good_thomas<T>(input,0,0,fft::Direction::inverse));
 }
 
 template <typename T>
