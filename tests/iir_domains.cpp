@@ -50,7 +50,7 @@ void invalid_coefficients() {
     for(const T bad:{nan,inf,-inf}) {
         for(const std::vector<T> numerator : {
                 std::vector<T>{bad},std::vector<T>{T{1},bad}}) {
-            const std::vector<T> denominator{T{1},T{-0.4}};
+            const std::vector<T> denominator{T{1},static_cast<T>(-0.4)};
             rejects([&]{ (void)iir::DirectFormI<T>(numerator,denominator); });
             rejects([&]{ (void)iir::DirectFormII<T>(numerator,denominator); });
             rejects([&]{ (void)iir::TransposedDirectFormI<T>(numerator,denominator); });
@@ -103,8 +103,8 @@ void malformed_zpk_domains() {
     using Zpk=design::Zpk<T>;
     const T nan=std::numeric_limits<T>::quiet_NaN();
     const T inf=std::numeric_limits<T>::infinity();
-    const Zpk good{{Complex{T{0.2},T{0.9}},Complex{T{0.2},T{-0.9}}},
-                   {Complex{T{0.3},T{0.4}},Complex{T{0.3},T{-0.4}}},T{1}};
+    const Zpk good{{Complex{static_cast<T>(0.2),static_cast<T>(0.9)},Complex{static_cast<T>(0.2),static_cast<T>(-0.9)}},
+                   {Complex{static_cast<T>(0.3),static_cast<T>(0.4)},Complex{static_cast<T>(0.3),static_cast<T>(-0.4)}},T{1}};
     // Exact conjugate pairs must remain accepted by both conversion paths.
     const auto good_sos=design::second_order_sections(good);
     const auto good_tf=design::transfer_function(good);
@@ -138,7 +138,7 @@ void malformed_zpk_domains() {
     // these approximate conjugates would silently discard a nonzero
     // imaginary term in the second-order section polynomial.
     Zpk mismatched=good;
-    mismatched.zeros[1]=Complex{static_cast<T>(0.2012),T{-0.9}};
+    mismatched.zeros[1]=Complex{static_cast<T>(0.2012),static_cast<T>(-0.9)};
     bool threw=false;
     try {(void)design::second_order_sections(mismatched);}
     catch(const std::runtime_error&) {threw=true;}
