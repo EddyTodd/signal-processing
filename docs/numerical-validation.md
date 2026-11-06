@@ -635,3 +635,53 @@ nine-sample benchmark cases plus parser self-tests. Remaining gaps
 include pathological intermediate FFT overflow, near-unit high-order
 IIR conditioning, complete API-wide NaN/Inf behavior, external
 benchmark baselines and cross-machine reproducibility.
+
+## Two verified 16-suite STFT domain campaigns and pending analytic oracles
+
+Source `584a2878254ea4b2b287be19153ab5f7bb15af35` passed **16/16 Release** and **16/16 ASan/UBSan**
+CTest executables with `-UNDEBUG` assertions active in two distinct
+pinned Local CI reports:
+
+- https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/584a2878254e-594b7546-54d69b3205978627
+- https://github.com/EddyTodd/local-ci-reports/tree/main/reports/autonomous/EddyTodd/signal-processing/ai-localci-dsp-research/584a2878254e-b9344b34-edce10bd802439ad
+
+The newer workflow configuration `b9344b3438397b8f7afc500d6b61cafc73f127c4` used the same benchmark
+source code, GCC 13.3.0 and Intel i7-13700KF, and again passed all
+four stages including benchmark-parser self-tests. Measured campaign
+artifact SHA-256 `ad2f3224085072652d80f1c9aec60d8650c21c02582baa416fbd48d6acc82a63` contains **236** native binary32/binary64
+FFT/convolution/DCT/FIR cases (118 shapes per precision), **nine
+timings per case** = **2,124 original samples**. Median, interpolated
+p10/p90, MAD and matched-precision/shape/regime speedups were
+independently checked against raw published samples. All 236 timing
+medians differ from the earlier same-source report even though the
+benchmark kernels and compiler flags were identical, so they are not
+evidence of code-level performance change. Available CPU ISA flags
+do not establish actual instructions executed. Results are empirical
+single-machine observations, not a cross-platform confidence interval.
+
+Website feature commit `060c162b17f6df82722606ead7a83559a193b466` deliberately retains the
+earlier verified, measured 16-suite source-matched artifact
+`5ae3e69f7fafd7aa7239fe380f21a9973a0ae761ba1255b3f5bd155ef8e85763`,
+without inventing an aggregate across noisy runs.
+https://github.com/EddyTodd/eddytodd-web/actions/runs/42230381911
+succeeded: Astro 0 errors/0 warnings, 3/3 provenance tests, full
+build, and 23 static + 1 proxied route smoke tests.
+
+### Next independent analytic-signal numerical gate
+
+Existing Goertzel and Hilbert tests covered relatively few lengths,
+off-bin frequencies or odd-length analytic signals. An additional
+`signal_processing_analytic_oracles` executable was committed and
+registered as the **17th** CTest. It constructs a mathematically
+independent `long double` DFT sum for Goertzel coefficients and an
+independent direct Fourier-domain Hilbert analytic-signal transform,
+covering complex and real float32/float64 signals, impulse,
+oscillatory/chirp-like inputs, empty/odd/even/prime/composite lengths,
+DFT bins, nonbin frequencies near Nyquist and 1, and signal envelopes.
+
+The new test is **not** part of either passed 16-suite run; next laptop
+Local CI must compile and pass **17/17 Release and 17/17 ASan/UBSan**
+with assertions enabled and publish the complete 236-case dual-precision
+benchmark/parser campaign. External FFTW/SciPy baselines,
+cross-compiler/ISA/platform replication, extreme IIR conditioning,
+global numerical proof and controlled machine uncertainty remain open.

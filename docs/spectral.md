@@ -208,6 +208,30 @@ A dedicated `signal_processing_stft_domains` 16th CTest exercises real
 and complex float32/float64 nonfinite windows/frames, underflowed and
 overflowed nonzero weights, cumulative overlap overflow, legal zero
 windows, and reconstruction through finite negative weights.
-**These additions have not yet passed laptop CI**; the next run must
-verify all **16/16 Release** and **16/16 ASan/UBSan** assertions and the
-fresh reproducible benchmark campaign.
+These additions subsequently passed **16/16 Release** and **16/16 ASan/UBSan**
+CTest suites with enabled assertions in exact pinned runs `584a2878254e-594b7546-54d69b3205978627`
+and `584a2878254e-b9344b34-edce10bd802439ad`. Both also ran their full 236-case dual-precision
+nine-sample benchmark and parser self-tests. Finite evidence does not
+establish global numerical correctness.
+
+## Pending independent Goertzel and Hilbert analytic-signal oracle
+
+The new `signal_processing_analytic_oracles` CTest uses independent
+`long double` direct mathematical DFT sums for real and complex
+Goertzel, covering empty, one-sample, odd, even, prime, composite and
+power-of-two lengths, impulse/chirp-like/oscillatory patterns,
+on-bin and off-bin frequencies including near 0, Nyquist, and 1
+cycle/sample. It explicitly verifies complex phase, not magnitude alone,
+and checks invalid frequency and out-of-range bin domains.
+
+For real Hilbert analytic signals, an independent `O(N²)` direct
+forward Fourier sum, canonical positive-frequency doubling and negative
+frequency zeroing, then `O(N²)` inverse transform establishes
+expected complex analytic samples. The assertions cover real-part
+reconstruction, imaginary Hilbert transform, magnitude envelope, short,
+odd/even and empty sequences for native binary32 and binary64.
+
+This is **new, unverified source code**: it must compile and pass a
+**17/17 Release and 17/17 ASan/UBSan** laptop CTest campaign with
+assertions active, alongside the complete measured benchmark/parser gate.
+No precision-specific tolerances from prior tests have been increased.
